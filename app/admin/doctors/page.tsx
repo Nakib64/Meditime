@@ -1,16 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Search, Loader2, Stethoscope, Globe } from "lucide-react";
 import { showToast } from "@/lib/toast";
-import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { t } from "@/lib/translations";
 import { Input } from "@/components/ui/input";
 import DoctorCard, { Doctor as DoctorType } from "@/components/doctor-card";
-
 
 interface Hospital {
   _id: string;
@@ -31,6 +30,8 @@ export default function DoctorsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const limit = 12;
   const { language: currentLanguage, setLanguage } = useLanguage();
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const getBengaliDay = (day: string): string => {
     const dayIndex = daysOfWeek.indexOf(day);
@@ -55,8 +56,6 @@ export default function DoctorsPage() {
       
       const time = (currentLanguage === 'bn' && slot.timeBn) ? slot.timeBn : (slot.time || "");
       const consecutive = areDaysConsecutive(sortedDays);
- 
-      
       
       if (sortedDays.length === 1) return `${getBengaliDay(sortedDays[0])} ${time}`;
       if (consecutive) {
@@ -65,17 +64,6 @@ export default function DoctorsPage() {
       return `${sortedDays.map((d: string) => getBengaliDay(d)).join(", ")} ${time}`;
     }).join("। ");
   };
-
-  useEffect(() => {
-    fetchHospitals();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchDoctors(currentPage);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [currentPage, searchQuery]);
 
   const fetchHospitals = async () => {
     try {
@@ -89,13 +77,14 @@ export default function DoctorsPage() {
     }
   };
 
-  const fetchDoctors = async (page: number) => {
+  // Fetch paginated and searched doctors
+  const fetchDoctors = useCallback(async (page: number) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       params.append("page", page.toString());
       params.append("limit", limit.toString());
-      if (searchQuery) params.append("search", searchQuery);
+      if (debouncedSearchQuery) params.append("search", debouncedSearchQuery);
       
       const response = await fetch(`/api/doctors?${params.toString()}`);
       const data = await response.json();
@@ -111,8 +100,32 @@ export default function DoctorsPage() {
       showToast.error("Failed to fetch doctors");
     } finally {
       setLoading(false);
+      setIsInitialLoad(false);
     }
-  };
+  }, [debouncedSearchQuery]);
+
+  // Load initial hospitals list
+  useEffect(() => {
+    fetchHospitals();
+  }, []);
+
+  // Debounce search query changes to prevent race conditions
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Trigger search fetch whenever page or debounced query changes
+  useEffect(() => {
+    fetchDoctors(currentPage);
+  }, [currentPage, debouncedSearchQuery, fetchDoctors]);
+
+  // Reset page to 1 whenever debounced search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
 
   const handleDelete = async (id: string) => {
     if (!confirm(currentLanguage === 'bn' ? "আপনি কি নিশ্চিত যে আপনি এই ডিটেইলসটি মুছে ফেলতে চান?" : "Are you sure you want to delete this doctor profile?")) return;
@@ -137,7 +150,6 @@ export default function DoctorsPage() {
   };
 
   const filteredDoctors = doctors.filter(doctor => {
-    // Show doctor if they have at least one name (English or Bangla)
     return !!doctor.name || !!doctor.nameBn;
   });
 
@@ -157,7 +169,7 @@ export default function DoctorsPage() {
     return pageNumbers;
   };
 
-  if (loading && doctors.length === 0) {
+  if (loading && isInitialLoad) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -188,16 +200,17 @@ export default function DoctorsPage() {
       <div className="flex flex-col md:flex-row gap-6 items-center max-w-5xl mx-auto md:mx-0">
         <div className="relative group flex-1 w-full">
           <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-            <Search className="h-6 w-6 text-gray-300 group-focus-within:text-primary transition-colors stroke-[2.5]" />
+            {loading ? (
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+            ) : (
+              <Search className="h-6 w-6 text-gray-300 group-focus-within:text-primary transition-colors stroke-[2.5]" />
+            )}
           </div>
           <Input
             type="text"
             placeholder={currentLanguage === 'bn' ? 'ডাক্তারের নাম বা বিশেষজ্ঞ দিয়ে খুঁজুন...' : 'Search by name or specialty...'}
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-16 h-16 text-xl border-2 border-gray-100 rounded-[1.5rem] bg-white shadow-lg shadow-gray-100/50 focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all pr-6 font-bold placeholder:text-gray-300"
           />
         </div>

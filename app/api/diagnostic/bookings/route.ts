@@ -6,6 +6,8 @@ import User from "@/models/User";
 import PhoneVerification from "@/models/PhoneVerification";
 import mongoose from "mongoose";
 import "@/models/Hospital"; // Ensure Hospital model is registered for populate
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   try {
@@ -15,11 +17,11 @@ export async function POST(req: Request) {
     // Validate mobile number: exactly 11 digits, strip +88 or +880 prefix if present
     let mobile = String(body.mobileNumber || '').trim();
     if (mobile.startsWith('+880')) {
-      mobile = mobile.slice(4);
+      mobile = '0' + mobile.slice(4);
     } else if (mobile.startsWith('+88')) {
-      mobile = mobile.slice(3);
+      mobile = '0' + mobile.slice(3);
     } else if (mobile.startsWith('880')) {
-      mobile = mobile.slice(3);
+      mobile = '0' + mobile.slice(3);
     }
     
     // Now replace non-digits
@@ -31,40 +33,22 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate phone verification
-    let isVerified = false;
-    if (body.userId) {
-      const user = await User.findById(body.userId);
-      if (user && user.isPhoneVerified) {
-        const userLocalPhone = user.phoneNumber.startsWith('+880')
-          ? '0' + user.phoneNumber.slice(4)
-          : (user.phoneNumber.startsWith('+88') ? '0' + user.phoneNumber.slice(3) : user.phoneNumber);
-          
-        if (userLocalPhone === cleanMobile) {
-          isVerified = true;
-        }
-      }
+    // Validate phone verification via cookie (always verify)
+    const cookieStore = await cookies();
+    const verifiedCookie = cookieStore.get("verified_phone_token")?.value;
+    if (!verifiedCookie) {
+      return NextResponse.json(
+        { error: "Phone number not verified. Please verify your phone number first." },
+        { status: 400 }
+      );
     }
 
-    if (!isVerified) {
-      const verification = await PhoneVerification.findOne({
-        phoneNumber: cleanMobile,
-        verified: true
-      });
-
-      if (!verification) {
-        return NextResponse.json(
-          { error: 'Phone number not verified. Please verify your phone number first.' },
-          { status: 400 }
-        );
-      }
-
-      // Delete verification document
-      try {
-        await PhoneVerification.deleteOne({ phoneNumber: cleanMobile });
-      } catch (e) {
-        console.error("Error deleting verification entry:", e);
-      }
+    const payload = await verifyToken(verifiedCookie);
+    if (!payload || !payload.verified || payload.phoneNumber !== cleanMobile) {
+      return NextResponse.json(
+        { error: "Phone number verification is invalid or expired. Please verify again." },
+        { status: 400 }
+      );
     }
 
     // Generate unique 8-digit ID
@@ -102,6 +86,17 @@ export async function POST(req: Request) {
       await AbandonedCart.deleteMany({ phoneNumber: body.mobileNumber });
     } catch (cleanupErr) {
       console.error("Error cleaning up abandoned cart:", cleanupErr);
+    }
+
+    // Clear verification cookie
+    try {
+      cookieStore.set('verified_phone_token', '', {
+        httpOnly: true,
+        expires: new Date(0),
+        path: '/',
+      });
+    } catch (e) {
+      console.error("Error clearing verified_phone_token cookie:", e);
     }
 
     return NextResponse.json(

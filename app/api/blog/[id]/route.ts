@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
+import dbConnect from "@/lib/mongodb";
 import Blog from "@/models/Blog";
-
-async function connectDB() {
-  if (mongoose.connection.readyState >= 1) return;
-  await mongoose.connect(process.env.MONGODB_URI as string);
-}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await connectDB();
+    await dbConnect();
     const blog = await Blog.findOne({ _id: id, isActive: true });
     if (!blog) {
       return NextResponse.json({ success: false, error: "Blog not found" }, { status: 404 });

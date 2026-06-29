@@ -6,7 +6,7 @@ import Affiliate from '@/models/Affiliate';
 import User from '@/models/User';
 import PhoneVerification from '@/models/PhoneVerification';
 import { sendSMS } from '@/lib/sms';
-import { getSession, getAdminSession } from '@/lib/auth';
+import { getSession, getAdminSession, verifyToken } from '@/lib/auth';
 
 // GET - Fetch all appointments or filter by doctorId
 export async function GET(request: NextRequest) {
@@ -137,44 +137,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate phone verification
-    let isVerified = false;
+    // Validate phone verification via cookie (always verify)
     const localPhone = mobileNumber.startsWith('+880') 
       ? '0' + mobileNumber.slice(4) 
       : (mobileNumber.startsWith('+88') ? '0' + mobileNumber.slice(3) : mobileNumber);
 
-    if (userId) {
-      const user = await User.findById(userId);
-      if (user && user.isPhoneVerified) {
-        const userLocalPhone = user.phoneNumber.startsWith('+880')
-          ? '0' + user.phoneNumber.slice(4)
-          : (user.phoneNumber.startsWith('+88') ? '0' + user.phoneNumber.slice(3) : user.phoneNumber);
-          
-        if (userLocalPhone === localPhone) {
-          isVerified = true;
-        }
-      }
+    const verifiedCookie = request.cookies.get("verified_phone_token")?.value;
+    if (!verifiedCookie) {
+      return NextResponse.json(
+        { error: "Phone number not verified. Please verify your phone number first." },
+        { status: 400 }
+      );
     }
 
-    if (!isVerified) {
-      const verification = await PhoneVerification.findOne({
-        phoneNumber: localPhone,
-        verified: true
-      });
-
-      if (!verification) {
-        return NextResponse.json(
-          { error: 'Phone number not verified. Please verify your phone number first.' },
-          { status: 400 }
-        );
-      }
-
-      // Delete the phone verification entry as it has been consumed
-      try {
-        await PhoneVerification.deleteOne({ phoneNumber: localPhone });
-      } catch (e) {
-        console.error("Error deleting verification entry:", e);
-      }
+    const payload = await verifyToken(verifiedCookie);
+    if (!payload || !payload.verified || payload.phoneNumber !== localPhone) {
+      return NextResponse.json(
+        { error: "Phone number verification is invalid or expired. Please verify again." },
+        { status: 400 }
+      );
     }
 
     // Verify doctor exists
@@ -259,10 +240,19 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send admin booking SMS alert:', smsErr);
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       { message: 'Appointment booked successfully', appointment },
       { status: 201 }
     );
+
+    // Clear verification cookie
+    response.cookies.set('verified_phone_token', '', {
+      httpOnly: true,
+      expires: new Date(0),
+      path: '/',
+    });
+
+    return response;
   } catch (error: any) {
     console.error('Error creating appointment:', error);
     return NextResponse.json(

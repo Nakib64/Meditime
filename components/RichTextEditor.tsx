@@ -18,10 +18,25 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
       readonly: false,
       placeholder: 'Start typing...',
       height: 400,
-      enableDragAndDropFileToEditor: true,
+      enableDragAndDropFileToEditor: false,
+      askBeforePasteHTML: false,
+      askBeforePasteFromWord: false,
+      defaultActionOnPaste: 'insert_as_html' as const,
       uploader: {
-        insertImageAsBase64URI: true,
+        insertImageAsBase64URI: false,
       },
+      buttons: [
+        'source', '|',
+        'bold', 'italic', 'underline', 'strikethrough', '|',
+        'superscript', 'subscript', '|',
+        'ul', 'ol', '|',
+        'outdent', 'indent', '|',
+        'font', 'fontsize', 'brush', 'paragraph', '|',
+        'table', 'link', '|',
+        'align', 'undo', 'redo', '|',
+        'hr', 'eraser', 'copyformat', '|',
+        'fullsize', 'selectall', 'print', 'about'
+      ],
     }),
     []
   );

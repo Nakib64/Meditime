@@ -348,16 +348,6 @@ export default function OffersPage() {
                   />
                   <Label htmlFor="isActive">Is Active</Label>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isPopup"
-                    checked={formData.isPopup}
-                    onChange={(e) => setFormData({ ...formData, isPopup: e.target.checked })}
-                    className="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary"
-                  />
-                  <Label htmlFor="isPopup">Show as Popup Banner (Latest one)</Label>
-                </div>
               </div>
             </div>
 
@@ -381,21 +371,23 @@ export default function OffersPage() {
         </Card>
       ) : !showForm && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {offers.map((offer) => (
-            <Card key={offer._id} className="flex flex-col hover:shadow-lg transition-all duration-200 group overflow-hidden">
-              <div className="h-40 overflow-hidden relative">
-                {offer.imageUrl ? (
-                  <img src={offer.imageUrl} alt={offer.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">No Image</div>
-                )}
-                {offer.isPopup && (
-                  <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">Popup</span>
-                )}
-                {!offer.isActive && (
-                  <span className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">Inactive</span>
-                )}
-              </div>
+          {(() => {
+            const latestActiveOfferId = offers.find(o => o.isActive)?._id;
+            return offers.map((offer) => (
+              <Card key={offer._id} className="flex flex-col hover:shadow-lg transition-all duration-200 group overflow-hidden">
+                <div className="h-40 overflow-hidden relative">
+                  {offer.imageUrl ? (
+                    <img src={offer.imageUrl} alt={offer.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">No Image</div>
+                  )}
+                  {offer._id === latestActiveOfferId && (
+                    <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">Popup Banner</span>
+                  )}
+                  {!offer.isActive && (
+                    <span className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">Inactive</span>
+                  )}
+                </div>
               <div className="p-4 flex-1">
                 <h3 className="font-bold text-lg mb-1 line-clamp-1">{offer.title}</h3>
                 <p className="text-gray-500 text-sm line-clamp-2" dangerouslySetInnerHTML={{ __html: offer.description }}></p>
@@ -409,7 +401,8 @@ export default function OffersPage() {
                 </Button>
               </div>
             </Card>
-          ))}
+          ));
+        })()}
         </div>
       )}
     </div>

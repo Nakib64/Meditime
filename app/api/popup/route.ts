@@ -7,8 +7,8 @@ export async function GET() {
     try {
         await dbConnect();
         
-        // 1. Check for latest active Offer with isPopup: true
-        const latestOffer = await Offer.findOne({ isActive: true, isPopup: true }).sort({ updatedAt: -1 });
+        // 1. Check for latest active Offer
+        const latestOffer = await Offer.findOne({ isActive: true }).sort({ createdAt: -1 });
         
         if (latestOffer) {
             return NextResponse.json({ 

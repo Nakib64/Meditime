@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import PhoneVerification from '@/models/PhoneVerification';
 import User from '@/models/User';
 import { sendSMS } from '@/lib/sms';
+import { signToken, verifyToken } from '@/lib/auth';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect();
     const { phoneNumber, checkExists } = await request.json();
 
     // Standardize to 11 digit check
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     // Check if phone number is already registered
     if (checkExists) {
-      // User model might store with or without +880
+      await dbConnect();
       const formattedWithCountry = `+880${phoneNumber.substring(1)}`;
       const userExists = await User.findOne({
         $or: [
@@ -30,36 +30,55 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if there is an active OTP within cooldown (2 minutes)
-    const existing = await PhoneVerification.findOne({ phoneNumber });
-    if (existing && existing.expiresAt.getTime() > Date.now()) {
-      const remainingSeconds = Math.ceil((existing.expiresAt.getTime() - Date.now()) / 1000);
-      return NextResponse.json({ 
-        error: `Please wait ${remainingSeconds} seconds before requesting a new OTP.` 
-      }, { status: 429 });
+    // Check cooldown stateless via cookie
+    const tempCookie = request.cookies.get('temp_otp_token')?.value;
+    if (tempCookie) {
+      const payload = await verifyToken(tempCookie);
+      if (payload && payload.sentAt && Date.now() - payload.sentAt < 2 * 60 * 1000) {
+        const remainingSeconds = Math.ceil((2 * 60 * 1000 - (Date.now() - payload.sentAt)) / 1000);
+        return NextResponse.json({ 
+          error: `Please wait ${remainingSeconds} seconds before requesting a new OTP.` 
+        }, { status: 429 });
+      }
     }
 
     // Generate 4-digit code
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
-
-    // Save/update verification entry
-    await PhoneVerification.findOneAndUpdate(
-      { phoneNumber },
-      { otp, expiresAt, verified: false },
-      { upsert: true, new: true }
-    );
+    const otpHash = await bcrypt.hash(otp, 10);
 
     // Format the OTP message as requested
     const message = `Your Meditime OTP code is: ${otp}.\nPlease do not share this code with anyone.\nThis code is valid for 2 minutes.`;
-    
     const smsRes = await sendSMS(phoneNumber, message);
 
     if (!smsRes.success) {
-      return NextResponse.json({ error: smsRes.error || 'Failed to send SMS' }, { status: 500 });
+      console.log(`[DEV OTP BYPASS] Failed to send SMS to ${phoneNumber}. OTP code: ${otp}`);
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ error: smsRes.error || 'Failed to send SMS' }, { status: 500 });
+      }
     }
 
-    return NextResponse.json({ success: true, message: 'OTP sent successfully' });
+    // Sign temporary token containing phoneNumber and hashed OTP
+    const tempToken = await signToken({
+      id: "temp",
+      email: "temp@meditime.com",
+      role: "temp",
+      phoneNumber,
+      otpHash,
+      sentAt: Date.now(),
+    }, "5m");
+
+    const response = NextResponse.json({ success: true, message: 'OTP sent successfully' });
+
+    // Set secure HTTP-Only cookie for verification
+    response.cookies.set('temp_otp_token', tempToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 5 * 60, // 5 minutes
+      path: '/',
+    });
+
+    return response;
   } catch (error: any) {
     console.error('Error sending OTP:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });

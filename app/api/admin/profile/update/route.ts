@@ -13,7 +13,7 @@ export async function PUT(request: NextRequest) {
 
     await dbConnect();
     const body = await request.json();
-    const { email, username, currentPassword, newPassword } = body;
+    const { email, username, currentPassword, newPassword, phoneNumber } = body;
 
     const admin = await Admin.findById(session.id);
     if (!admin) {
@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verify current password if any sensitive changes or password change
-    if (newPassword || email !== admin.email || username !== admin.username) {
+    if (newPassword || email !== admin.email || username !== admin.username || phoneNumber !== admin.phoneNumber) {
       if (!currentPassword) {
         return NextResponse.json({ error: "Current password is required to update credentials" }, { status: 400 });
       }
@@ -34,6 +34,19 @@ export async function PUT(request: NextRequest) {
     // Update fields
     if (email) admin.email = email.toLowerCase();
     if (username) admin.username = username.toLowerCase();
+    
+    // Validate and update phone number
+    if (phoneNumber !== undefined) {
+      if (phoneNumber) {
+        const numbers = phoneNumber.split(",").map((num: string) => num.trim()).filter(Boolean);
+        const isValid = numbers.every((num: string) => num.length === 11 && num.startsWith("01") && /^\d+$/.test(num));
+        if (!isValid) {
+          return NextResponse.json({ error: "Invalid phone number format. All numbers must be 11 digits starting with 01, separated by commas." }, { status: 400 });
+        }
+      }
+      admin.phoneNumber = phoneNumber || "";
+    }
+
     if (newPassword) {
       admin.password = await bcrypt.hash(newPassword, 10);
     }
@@ -47,6 +60,7 @@ export async function PUT(request: NextRequest) {
         email: admin.email,
         username: admin.username,
         role: admin.role,
+        phoneNumber: admin.phoneNumber,
       }
     });
   } catch (error: any) {

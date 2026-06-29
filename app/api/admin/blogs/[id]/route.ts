@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
+import dbConnect from "@/lib/mongodb";
 import Blog from "@/models/Blog";
-
-async function connectDB() {
-  if (mongoose.connection.readyState >= 1) return;
-  return mongoose.connect(process.env.MONGODB_URI!);
-}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await connectDB();
+    await dbConnect();
     const blog = await Blog.findById((await params).id);
     if (!blog) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
     return NextResponse.json({ success: true, blog });
@@ -20,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await connectDB();
+    await dbConnect();
     const body = await req.json();
     const blog = await Blog.findByIdAndUpdate((await params).id, body, { new: true });
     return NextResponse.json({ success: true, blog });
@@ -31,7 +26,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await connectDB();
+    await dbConnect();
     await Blog.findByIdAndDelete((await params).id);
     return NextResponse.json({ success: true });
   } catch (error) {

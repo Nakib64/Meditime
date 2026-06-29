@@ -123,22 +123,8 @@ export default function DiagnosticCheckoutPage() {
       return;
     }
 
-    // Check if phone verification is needed
-    let needsVerification = true;
-    if (currentUser && currentUser.isPhoneVerified) {
-      const userLocalPhone = currentUser.phoneNumber.startsWith("+880")
-        ? "0" + currentUser.phoneNumber.slice(4)
-        : (currentUser.phoneNumber.startsWith("+88") ? "0" + currentUser.phoneNumber.slice(3) : currentUser.phoneNumber);
-      if (userLocalPhone === mobileNumber) {
-        needsVerification = false;
-      }
-    }
-
-    if (needsVerification) {
-      setShowVerifyModal(true);
-    } else {
-      await proceedToSuccess();
-    }
+    // Check if phone verification is needed — ALWAYS verify phone number
+    setShowVerifyModal(true);
   };
 
   const handleVerifySuccess = async () => {

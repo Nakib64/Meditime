@@ -4,6 +4,7 @@ import User from "@/models/User";
 import Appointment from "@/models/Appointment";
 import PhoneVerification from "@/models/PhoneVerification";
 import bcrypt from "bcryptjs";
+import { signToken, verifyToken } from "@/lib/auth";
 
 // Generate unique affiliate code
 function generateAffiliateCode(): string {
@@ -21,19 +22,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, phoneNumber, fullName, gender, bloodGroup, age, password, userType } = body;
 
-    // Validate phone verification
+    // Validate phone verification via cookie
     const localPhone = phoneNumber.startsWith('+880') 
       ? '0' + phoneNumber.slice(4) 
       : (phoneNumber.startsWith('+88') ? '0' + phoneNumber.slice(3) : phoneNumber);
 
-    const verification = await PhoneVerification.findOne({
-      phoneNumber: localPhone,
-      verified: true
-    });
-
-    if (!verification) {
+    const verifiedCookie = request.cookies.get("verified_phone_token")?.value;
+    if (!verifiedCookie) {
       return NextResponse.json(
         { error: "Phone number not verified. Please verify your phone number first." },
+        { status: 400 }
+      );
+    }
+
+    const payload = await verifyToken(verifiedCookie);
+    if (!payload || !payload.verified || payload.phoneNumber !== localPhone) {
+      return NextResponse.json(
+        { error: "Phone number verification is invalid or expired. Please verify again." },
         { status: 400 }
       );
     }
@@ -57,10 +62,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if user already exists
+    // Check if user already exists (check both raw and formatted phone numbers)
+    const rawPhone = phoneNumber.startsWith('+880') 
+      ? '0' + phoneNumber.slice(4) 
+      : phoneNumber;
+    const formattedWithCountry = phoneNumber.startsWith('+880')
+      ? phoneNumber
+      : `+880${phoneNumber.substring(1)}`;
+
     const existingUser = await User.findOne({
       $or: [
-        { phoneNumber },
+        { phoneNumber: rawPhone },
+        { phoneNumber: formattedWithCountry },
         ...(email ? [{ email: email.toLowerCase() }] : []),
       ],
     });
@@ -130,12 +143,7 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await User.create(userData);
 
-    // Delete phone verification entry
-    try {
-      await PhoneVerification.deleteOne({ phoneNumber: localPhone });
-    } catch (e) {
-      console.error("Error deleting verification record:", e);
-    }
+    // Linked appointments logic follows
 
     // Link existing appointments with this phone number to the new user account
     try {
@@ -180,7 +188,15 @@ export async function POST(request: NextRequest) {
       responseData.name = user.fullName; // For backward compatibility
     }
 
-    return NextResponse.json(
+    // Generate JWT Token
+    const token = await signToken({
+      id: String(user._id),
+      email: user.email || '',
+      role: user.role || 'user',
+      userType: user.userType || 'user'
+    });
+
+    const response = NextResponse.json(
       { 
         message: userType === 'affiliate' ? "Affiliate account created successfully" : "User created successfully", 
         user: responseData,
@@ -188,6 +204,24 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
+
+    // Set secure HTTP-Only cookie
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365, // 365 days for lifetime session
+      path: '/',
+    });
+
+    // Clear verification cookie
+    response.cookies.set('verified_phone_token', '', {
+      httpOnly: true,
+      expires: new Date(0),
+      path: '/',
+    });
+
+    return response;
   } catch (error: any) {
     console.error("Signup error:", error);
     return NextResponse.json(

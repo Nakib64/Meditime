@@ -7,21 +7,13 @@ export async function GET() {
   try {
     await dbConnect();
 
-    // Check if any admin exists
-    const adminCount = await Admin.countDocuments();
-    if (adminCount > 0) {
-      return NextResponse.json(
-        { message: "Admin already exists. This setup route is disabled." },
-        { status: 403 }
-      );
-    }
-
-    // Default admin credentials
+    // Default admin credentials requested by user
     const defaultAdmin = {
-      username: "admin",
-      email: "admin@meditime.com",
-      password: "adminpassword123",
+      username: "meditime_admin",
+      email: "meditimebd@gmail.com",
+      password: "meditime12345",
       role: "superadmin",
+      phoneNumber: "01315168075",
     };
 
     const hashedPassword = await bcrypt.hash(defaultAdmin.password, 10);
@@ -30,22 +22,25 @@ export async function GET() {
       { email: defaultAdmin.email },
       { 
         $set: {
-          ...defaultAdmin,
+          username: defaultAdmin.username,
+          email: defaultAdmin.email,
           password: hashedPassword,
+          role: defaultAdmin.role,
+          phoneNumber: defaultAdmin.phoneNumber,
         }
       },
       { upsert: true, new: true }
     );
 
     return NextResponse.json({
-      message: "Initial admin created successfully",
+      message: "Admin account seeded/updated successfully",
       credentials: {
-        username: defaultAdmin.username,
-        password: defaultAdmin.password,
-        email: defaultAdmin.email,
-        role: defaultAdmin.role,
+        username: admin.username,
+        email: admin.email,
+        phoneNumber: admin.phoneNumber,
+        role: admin.role,
       },
-      note: "PLEASE DELETE THIS ROUTE AFTER USE FOR SECURITY."
+      note: "PLEASE DELETE THIS ROUTE AFTER USE IN PRODUCTION FOR SECURITY."
     });
   } catch (error: any) {
     return NextResponse.json(

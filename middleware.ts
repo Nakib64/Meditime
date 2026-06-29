@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSession, getAdminSession } from '@/lib/auth';
+import { getSession, getAdminSession, signToken, verifyToken } from '@/lib/auth';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   const isAdminPath = pathname.startsWith('/admin');
   const isAdminLoginPath = pathname === '/admin-login';
   const isAdminApiPath = pathname.startsWith('/api/admin');
-  const isAdminAuthApi = pathname === '/api/admin/auth/login';
+  const isAdminAuthApi = pathname === '/api/admin/auth/login' || pathname === '/api/admin/auth/verify-otp';
   const isAdminSetupApi = pathname === '/api/admin/setup';
 
   // 2. Sensitive Management APIs (Protected for Write Operations)
@@ -40,7 +40,39 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAdminPath || isAdminApiPath || (isSensitiveApi && isWriteOperation)) {
-    const session = await getAdminSession(request);
+    let session = await getAdminSession(request);
+    let response = NextResponse.next();
+
+    // Check if access token is invalid/expired but refresh token is valid
+    const hasAccessToken = request.cookies.has('admin_access_token');
+    const hasRefreshToken = request.cookies.has('admin_refresh_token');
+
+    if (!hasAccessToken && hasRefreshToken) {
+      const refreshToken = request.cookies.get('admin_refresh_token')?.value;
+      if (refreshToken) {
+        const payload = await verifyToken(refreshToken);
+        if (payload && (payload.role === 'admin' || payload.role === 'superadmin')) {
+          session = payload;
+          const newAccessToken = await signToken({
+            id: payload.id,
+            email: payload.email,
+            role: payload.role,
+          }, '15m');
+
+          // Set cookie on response so it updates the client browser
+          response.cookies.set('admin_access_token', newAccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60, // 15 minutes
+            path: '/',
+          });
+
+          // Set cookie on the request headers so that subsequent middleware/APIs see it
+          request.cookies.set('admin_access_token', newAccessToken);
+        }
+      }
+    }
 
     // Scenario 1: Not Logged In as Admin
     if (!session) {
@@ -55,6 +87,8 @@ export async function middleware(request: NextRequest) {
       }
       return NextResponse.redirect(url);
     }
+
+    return response;
   }
 
   return NextResponse.next();

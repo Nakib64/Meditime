@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -50,11 +50,21 @@ export default function LoginPage() {
   const { language } = useLanguage() as { language: 'en' | 'bn' };
   const t = homepageTranslations[language].authPage;
 
-  const [mode, setMode] = useState<'login' | 'forgot_email' | 'forgot_otp' | 'forgot_reset'>('login');
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetOtp, setResetOtp] = useState("");
+  const [mode, setMode] = useState<'login' | 'forgot_phone' | 'forgot_otp' | 'forgot_reset'>('login');
+  const [resetPhone, setResetPhone] = useState("");
+  const [codeDigits, setCodeDigits] = useState<string[]>(["", "", "", ""]);
   const [resetPassword, setResetPassword] = useState("");
   const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    if (mode === 'forgot_otp') {
+      setCodeDigits(["", "", "", ""]);
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 100);
+    }
+  }, [mode]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -104,13 +114,28 @@ export default function LoginPage() {
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetEmail) return showToast.error("Email is required");
+    if (!resetPhone) return showToast.error(language === 'en' ? "Phone number is required" : "ফোন নম্বর প্রয়োজন");
+    
+    let cleanPhone = resetPhone.replace(/\D/g, "");
+    if (cleanPhone.startsWith("880")) {
+      cleanPhone = cleanPhone.substring(3);
+    } else if (cleanPhone.startsWith("88")) {
+      cleanPhone = cleanPhone.substring(2);
+    }
+    if (!cleanPhone.startsWith("0")) {
+      cleanPhone = "0" + cleanPhone;
+    }
+
+    if (cleanPhone.length !== 11 || !cleanPhone.startsWith("01")) {
+      return showToast.error(language === 'en' ? "Invalid phone number format" : "অবৈধ ফোন নম্বর");
+    }
+
     setIsLoading(true);
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send_otp", email: resetEmail })
+        body: JSON.stringify({ action: "send_otp", phoneNumber: cleanPhone })
       });
       const data = await res.json();
       if (res.ok) {
@@ -128,13 +153,16 @@ export default function LoginPage() {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetOtp) return showToast.error("OTP is required");
+    const code = codeDigits.join("");
+    if (code.length !== 4) {
+      return showToast.error(language === 'en' ? "Please enter a 4-digit code" : "অনুগ্রহ করে ৪-ডিজিটের কোড দিন");
+    }
     setIsLoading(true);
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "verify_otp", email: resetEmail, otp: resetOtp })
+        body: JSON.stringify({ action: "verify_otp", otp: code })
       });
       const data = await res.json();
       if (res.ok) {
@@ -163,14 +191,14 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reset_password", email: resetEmail, otp: resetOtp, newPassword: resetPassword })
+        body: JSON.stringify({ action: "reset_password", newPassword: resetPassword })
       });
       const data = await res.json();
       if (res.ok) {
         showToast.success(data.message);
         setMode('login');
-        setResetEmail("");
-        setResetOtp("");
+        setResetPhone("");
+        setCodeDigits(["", "", "", ""]);
         setResetPassword("");
         setResetConfirmPassword("");
       } else {
@@ -180,6 +208,61 @@ export default function LoginPage() {
       showToast.error("An error occurred");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    const cleanValue = value.replace(/\D/g, "");
+    if (!cleanValue) {
+      const newDigits = [...codeDigits];
+      newDigits[index] = "";
+      setCodeDigits(newDigits);
+      return;
+    }
+
+    const digit = cleanValue[cleanValue.length - 1];
+    const newDigits = [...codeDigits];
+    newDigits[index] = digit;
+    setCodeDigits(newDigits);
+
+    if (index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace") {
+      if (!codeDigits[index]) {
+        if (index > 0) {
+          const newDigits = [...codeDigits];
+          newDigits[index - 1] = "";
+          setCodeDigits(newDigits);
+          inputRefs.current[index - 1]?.focus();
+        }
+      } else {
+        const newDigits = [...codeDigits];
+        newDigits[index] = "";
+        setCodeDigits(newDigits);
+      }
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
+    if (pastedData) {
+      const newDigits = [...codeDigits];
+      for (let i = 0; i < 4; i++) {
+        newDigits[i] = pastedData[i] || "";
+      }
+      setCodeDigits(newDigits);
+
+      const focusIndex = Math.min(pastedData.length, 3);
+      inputRefs.current[focusIndex]?.focus();
     }
   };
 
@@ -280,7 +363,7 @@ export default function LoginPage() {
                         <div className="flex justify-end">
                           <button 
                             type="button"
-                            onClick={() => setMode('forgot_email')} 
+                            onClick={() => setMode('forgot_phone')} 
                             className="text-sm text-primary hover:underline bg-transparent border-none p-0 cursor-pointer"
                           >
                             {t.forgotPassword}
@@ -322,31 +405,40 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* FORGOT PASSWORD - EMAIL MODE */}
-                  {mode === 'forgot_email' && (
+                  {/* FORGOT PASSWORD - PHONE MODE */}
+                  {mode === 'forgot_phone' && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                       <button 
                         onClick={() => setMode('login')}
-                        className="flex items-center text-sm text-gray-500 hover:text-primary mb-6 transition-colors"
+                        className="flex items-center text-sm text-gray-500 hover:text-primary mb-6 transition-colors bg-transparent border-none p-0 cursor-pointer"
                       >
                         <ArrowLeft className="h-4 w-4 mr-1" />
                         {language === "bn" ? "লগইন এ ফিরে যান" : "Back to login"}
                       </button>
                       <h3 className="text-3xl font-bold text-gray-900 mb-2">{language === "bn" ? "পাসওয়ার্ড ভুলে গেছেন" : "Forgot Password"}</h3>
-                      <p className="text-gray-600 mb-8">{language === "bn" ? "একটি ৬-ডিজিটের ভেরিফিকেশন কোড পেতে আপনার নিবন্ধিত ইমেইল ঠিকানা লিখুন।" : "Enter your registered email address to receive a 6-digit verification code."}</p>
+                      <p className="text-gray-600 mb-8">{language === "bn" ? "একটি ৪-ডিজিটের ভেরিফিকেশন কোড পেতে আপনার নিবন্ধিত ফোন নম্বর লিখুন।" : "Enter your registered phone number to receive a 4-digit verification code."}</p>
 
                       <form onSubmit={handleSendOtp} className="space-y-6">
                         <div>
-                          <Label htmlFor="resetEmail">{language === "bn" ? "ইমেইল ঠিকানা" : "Email Address"}</Label>
-                          <Input
-                            id="resetEmail"
-                            type="email"
-                            placeholder="e.g. user@example.com"
-                            value={resetEmail}
-                            onChange={(e) => setResetEmail(e.target.value)}
-                            required
-                            className="mt-1"
-                          />
+                          <Label htmlFor="resetPhone">{language === "bn" ? "মোবাইল নম্বর" : "Phone Number"}</Label>
+                          <div className="relative flex items-center mt-1">
+                            <span className="absolute left-3 flex items-center gap-1.5 text-gray-500 text-sm border-r pr-2 h-6 border-gray-300 pointer-events-none select-none">
+                              <img src="https://flagcdn.com/w40/bd.png" alt="BD" className="w-6 h-4 rounded-sm object-cover" />
+                              <span>+88</span>
+                            </span>
+                            <Input
+                              id="resetPhone"
+                              type="tel"
+                              placeholder="01XXXXXXXXX"
+                              value={resetPhone}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                setResetPhone(val);
+                              }}
+                              required
+                              className="w-full pl-[5rem]"
+                            />
+                          </div>
                         </div>
                         <Button
                           type="submit"
@@ -363,28 +455,39 @@ export default function LoginPage() {
                   {mode === 'forgot_otp' && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                       <button 
-                        onClick={() => setMode('forgot_email')}
-                        className="flex items-center text-sm text-gray-500 hover:text-primary mb-6 transition-colors"
+                        onClick={() => setMode('forgot_phone')}
+                        className="flex items-center text-sm text-gray-500 hover:text-primary mb-6 transition-colors bg-transparent border-none p-0 cursor-pointer"
                       >
                         <ArrowLeft className="h-4 w-4 mr-1" />
                         {language === "bn" ? "ফিরে যান" : "Back"}
                       </button>
-                      <h3 className="text-3xl font-bold text-gray-900 mb-2">{language === "bn" ? "আপনার ইমেইল চেক করুন" : "Check Your Email"}</h3>
-                      <p className="text-gray-600 mb-8">{language === "bn" ? "আমরা একটি ৬-ডিজিটের ভেরিফিকেশন কোড পাঠিয়েছি " : "We've sent a 6-digit verification code to "}<strong>{resetEmail}</strong>. {language === "bn" ? "এটি ১০ মিনিটের মধ্যে শেষ হয়ে যাবে।" : "It will expire in 10 minutes."}</p>
+                      <h3 className="text-3xl font-bold text-gray-900 mb-2">{language === "bn" ? "ফোনে পাঠানো কোডটি লিখুন" : "Enter Verification Code"}</h3>
+                      <p className="text-gray-600 mb-8">
+                        {language === "bn" 
+                          ? `আমরা আপনার +88${resetPhone} নম্বরে ৪-ডিজিটের ওটিপি কোড পাঠিয়েছি যা ৫ মিনিটের মধ্যে শেষ হয়ে যাবে।`
+                          : `We've sent a 4-digit verification code to +88${resetPhone}. It will expire in 5 minutes.`}
+                      </p>
 
                       <form onSubmit={handleVerifyOtp} className="space-y-6">
-                        <div>
-                          <Label htmlFor="resetOtp">{language === "bn" ? "৬-ডিজিটের কোড" : "6-Digit Code"}</Label>
-                          <Input
-                            id="resetOtp"
-                            type="text"
-                            placeholder={language === "bn" ? "ওটিপি লিখুন" : "Enter OTP"}
-                            value={resetOtp}
-                            onChange={(e) => setResetOtp(e.target.value)}
-                            required
-                            className="mt-1 text-center text-2xl tracking-[0.5em] font-mono"
-                            maxLength={6}
-                          />
+                        <div className="flex justify-center gap-3 py-4">
+                          {[0, 1, 2, 3].map((index) => (
+                            <input
+                              key={index}
+                              ref={(el) => {
+                                inputRefs.current[index] = el;
+                              }}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={1}
+                              value={codeDigits[index]}
+                              onChange={(e) => handleOtpChange(index, e.target.value)}
+                              onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                              onPaste={handleOtpPaste}
+                              className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-200 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-slate-800"
+                              required
+                            />
+                          ))}
                         </div>
                         <Button
                           type="submit"

@@ -112,13 +112,26 @@ export default function SignupPage() {
   }, [phoneNumber, language]);
 
   const onSubmit = async (data: SignupFormValues) => {
-    if (phoneErrorMsg) {
-      showToast.error(phoneErrorMsg);
-      return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/auth/check-phone?phoneNumber=${data.phoneNumber}`);
+      const checkData = await res.json();
+      if (checkData.exists) {
+        setPhoneErrorMsg(language === 'en' ? "Phone number already registered." : "এই ফোন নম্বরটি ইতিমধ্যে নিবন্ধিত হয়েছে।");
+        showToast.error(language === 'en' ? "Phone number already registered." : "এই ফোন নম্বরটি ইতিমধ্যে নিবন্ধিত হয়েছে।");
+        setIsLoading(false);
+        return;
+      }
+
+      setPhoneErrorMsg("");
+      setTempSignupData(data);
+      setShowVerifyModal(true);
+    } catch (err) {
+      console.error("Error checking phone number before signup:", err);
+      showToast.error("Failed to verify phone number. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-    // Set temp data and trigger verify modal
-    setTempSignupData(data);
-    setShowVerifyModal(true);
   };
 
   const handleVerifySuccess = async () => {

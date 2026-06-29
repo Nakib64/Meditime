@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { showToast } from "@/lib/toast";
 import { ChevronRight } from "lucide-react";
 
@@ -27,11 +27,85 @@ export default function PhoneVerificationModal({
   language,
   checkExists = false,
 }: PhoneVerificationModalProps) {
-  const [code, setCode] = useState("");
+  const [codeDigits, setCodeDigits] = useState<string[]>(["", "", "", ""]);
+  const code = codeDigits.join("");
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [timer, setTimer] = useState(120); // 2 minutes in seconds
   const [error, setError] = useState("");
+
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Focus first input on open and reset code digits
+  useEffect(() => {
+    if (isOpen) {
+      setCodeDigits(["", "", "", ""]);
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 100);
+    }
+  }, [isOpen]);
+
+  const handleChange = (index: number, value: string) => {
+    const cleanValue = value.replace(/\D/g, "");
+    if (!cleanValue) {
+      const newDigits = [...codeDigits];
+      newDigits[index] = "";
+      setCodeDigits(newDigits);
+      if (error) setError("");
+      return;
+    }
+
+    const digit = cleanValue[cleanValue.length - 1]; // take the last entered char
+    const newDigits = [...codeDigits];
+    newDigits[index] = digit;
+    setCodeDigits(newDigits);
+    if (error) setError("");
+
+    // Focus next input if current one is filled
+    if (index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace") {
+      if (!codeDigits[index]) {
+        if (index > 0) {
+          const newDigits = [...codeDigits];
+          newDigits[index - 1] = "";
+          setCodeDigits(newDigits);
+          inputRefs.current[index - 1]?.focus();
+        }
+      } else {
+        const newDigits = [...codeDigits];
+        newDigits[index] = "";
+        setCodeDigits(newDigits);
+      }
+      if (error) setError("");
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
+    if (pastedData) {
+      const newDigits = [...codeDigits];
+      for (let i = 0; i < 4; i++) {
+        newDigits[i] = pastedData[i] || "";
+      }
+      setCodeDigits(newDigits);
+      if (error) setError("");
+
+      // Focus the appropriate input
+      const focusIndex = Math.min(pastedData.length, 3);
+      inputRefs.current[focusIndex]?.focus();
+    }
+  };
 
   const t = {
     title: { en: "Verify Your Phone Number", bn: "মোবাইল নম্বর যাচাইকরণ" },
@@ -53,6 +127,10 @@ export default function PhoneVerificationModal({
     if (!phoneNumber) return;
     setSending(true);
     setError("");
+    setCodeDigits(["", "", "", ""]);
+    setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 100);
     try {
       const res = await fetch("/api/verify-phone/send", {
         method: "POST",
@@ -78,7 +156,7 @@ export default function PhoneVerificationModal({
     } finally {
       setSending(false);
     }
-  }, [phoneNumber, checkExists, language]);
+  }, [phoneNumber, checkExists, language, setCodeDigits]);
 
   // Send OTP automatically when modal opens
   useEffect(() => {
@@ -155,22 +233,29 @@ export default function PhoneVerificationModal({
         </p>
 
         <form onSubmit={handleVerify} className="space-y-6">
-          <div className="flex flex-col items-center">
-            <input
-              type="text"
-              maxLength={4}
-              value={code}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-                setCode(val);
-                if (error) setError("");
-              }}
-              placeholder={t.placeholder[language]}
-              className="w-48 text-center text-2xl font-bold tracking-[0.5em] pl-[0.5em] py-3 border-2 border-slate-200 rounded-2xl focus:border-[#3DB5A0] focus:ring-4 focus:ring-[#3DB5A0]/10 transition-all outline-none"
-              required
-            />
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex justify-center gap-3">
+              {[0, 1, 2, 3].map((index) => (
+                <input
+                  key={index}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={1}
+                  value={codeDigits[index]}
+                  onChange={(e) => handleChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  onPaste={handlePaste}
+                  className="w-12 h-14 text-center text-2xl font-bold border-2 border-slate-200 rounded-2xl focus:border-[#3DB5A0] focus:ring-4 focus:ring-[#3DB5A0]/10 transition-all outline-none text-slate-800"
+                  required
+                />
+              ))}
+            </div>
             {error && (
-              <p className="text-xs text-red-500 font-medium text-center mt-2">
+              <p className="text-xs text-red-500 font-medium text-center">
                 {error}
               </p>
             )}

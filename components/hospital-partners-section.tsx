@@ -31,7 +31,7 @@ function HospitalCardImage({ src, alt, fallback }: { src: string; alt: string; f
       src={imgSrc}
       alt={alt}
       fill
-      className="object-cover transition-transform duration-700 group-hover:scale-110"
+      className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-50"
       onError={() => setImgSrc(fallback)}
     />
   );
@@ -96,14 +96,10 @@ export default function HospitalPartnersSection() {
           <div className="animate-marquee flex gap-8">
             {hospitals.map((hospital, idx) => {
               const medicalPlaceholders = [
-                "https://images.unsplash.com/photo-1587350859728-117622bc73cd", // Modern Hospital
-                "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d", // Interior
-                "https://images.unsplash.com/photo-1516549655169-df83a0774514", // Patient Care
-                "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b", // Equipment
-                "https://images.unsplash.com/photo-1512678080530-7760d81faba6", // Medical center
+               '/Hospital.png'
               ];
               const placeholder = medicalPlaceholders[idx % medicalPlaceholders.length] + "?auto=format&fit=crop&w=800&q=80";
-              const staticFallback = "/slide.jpg";
+              const staticFallback = "/Hospital.png";
 
               return (
                 <Link
@@ -113,7 +109,7 @@ export default function HospitalPartnersSection() {
                 >
                   {/* Hospital Photo Cover with Fallback Logic */}
                   <HospitalCardImage 
-                    src={hospital.photo || placeholder} 
+                    src={'/Hospital.png'} 
                     alt={hospital.name} 
                     fallback={staticFallback} 
                   />

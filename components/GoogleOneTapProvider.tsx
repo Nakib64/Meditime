@@ -12,7 +12,11 @@ export default function GoogleOneTapProvider() {
   const { language } = useLanguage() as { language: "en" | "bn" };
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
+  const isAdminRoute = pathname.startsWith('/admin') || pathname === '/admin-login';
+
   useEffect(() => {
+    if (isAdminRoute) return;
+
     // Wait for script to be loaded and window.google to be available
     if (!scriptLoaded || typeof window === "undefined" || !(window as any).google) return;
     
@@ -103,7 +107,9 @@ export default function GoogleOneTapProvider() {
     } catch (err) {
       console.error("Error initializing Google Identity Services:", err);
     }
-  }, [scriptLoaded, pathname, language, router]);
+  }, [scriptLoaded, pathname, language, router, isAdminRoute]);
+
+  if (isAdminRoute) return null;
 
   return (
     <Script

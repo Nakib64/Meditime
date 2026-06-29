@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showToast } from "@/lib/toast";
-import { User, Mail, Shield, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Shield, Lock, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
@@ -14,10 +14,12 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     email: "",
     username: "",
+    phoneNumber: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+  const [phoneNumbers, setPhoneNumbers] = useState<string[]>([""]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -29,7 +31,12 @@ export default function SettingsPage() {
             ...prev,
             email: data.user.email || "",
             username: data.user.username || "",
+            phoneNumber: data.user.phoneNumber || "",
           }));
+          const nums = data.user.phoneNumber
+            ? data.user.phoneNumber.split(",").map((n: string) => n.trim()).filter(Boolean)
+            : [""];
+          setPhoneNumbers(nums.length > 0 ? nums : [""]);
         }
       } catch (err) {
         console.error("Failed to load admin profile info:", err);
@@ -49,12 +56,17 @@ export default function SettingsPage() {
       return showToast.error("New passwords do not match");
     }
 
+    const updatedPhoneNumber = phoneNumbers.map(n => n.trim()).filter(Boolean).join(",");
+
     setLoading(true);
     try {
       const response = await fetch("/api/admin/profile/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          phoneNumber: updatedPhoneNumber,
+        }),
       });
 
       const result = await response.json();
@@ -63,6 +75,7 @@ export default function SettingsPage() {
         showToast.success("Profile updated successfully");
         setFormData(prev => ({
           ...prev,
+          phoneNumber: result.user.phoneNumber || "",
           currentPassword: "",
           newPassword: "",
           confirmPassword: "",
@@ -126,6 +139,55 @@ export default function SettingsPage() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-4 md:col-span-2">
+              <Label>Phone Numbers (For SMS OTP Verification)</Label>
+              <div className="space-y-3">
+                {phoneNumbers.map((phone, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        type="tel"
+                        placeholder="01XXXXXXXXX (11 digits)"
+                        className="h-11 rounded-xl"
+                        value={phone}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                          const updated = [...phoneNumbers];
+                          updated[index] = val;
+                          setPhoneNumbers(updated);
+                        }}
+                        required
+                      />
+                    </div>
+                    {phoneNumbers.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-11 px-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl animate-fade-in"
+                        onClick={() => {
+                          const updated = phoneNumbers.filter((_, i) => i !== index);
+                          setPhoneNumbers(updated);
+                        }}
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 text-primary border-primary/20 hover:bg-primary/5 rounded-xl h-10"
+                onClick={() => setPhoneNumbers([...phoneNumbers, ""])}
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add Phone Number
+              </Button>
+              <p className="text-xs text-gray-500 mt-1">Each phone number must be an 11-digit Bangladeshi number starting with 01 (e.g. 01712345678). Used for SMS verification upon login.</p>
             </div>
           </div>
         </Card>

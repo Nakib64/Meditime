@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { Eye, EyeOff, CheckCircle, Copy } from "lucide-react";
 import { showToast } from "@/lib/toast";
+import PhoneVerificationModal from "@/components/PhoneVerificationModal";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const signupSchema = z
   .object({
@@ -39,6 +41,17 @@ export default function AffiliateSignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [affiliateCode, setAffiliateCode] = useState<string | null>(null);
 
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [tempSignupData, setTempSignupData] = useState<SignupFormValues | null>(null);
+
+  let language: "en" | "bn" = "bn";
+  try {
+    const langContext = useLanguage() as { language: "en" | "bn" };
+    if (langContext && langContext.language) {
+      language = langContext.language;
+    }
+  } catch (e) {}
+
   const {
     register,
     handleSubmit,
@@ -57,16 +70,61 @@ export default function AffiliateSignupForm() {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
-      const { agreeToTerms, confirmPassword, ...signupData } = data;
+      let cleanPhone = data.phoneNumber.replace(/\D/g, "");
+      if (cleanPhone.startsWith("880")) {
+        cleanPhone = cleanPhone.substring(3);
+      } else if (cleanPhone.startsWith("88")) {
+        cleanPhone = cleanPhone.substring(2);
+      }
+      if (!cleanPhone.startsWith("0")) {
+        cleanPhone = "0" + cleanPhone;
+      }
+
+      if (cleanPhone.length !== 11 || !cleanPhone.startsWith("01")) {
+        showToast.error("অবৈধ ফোন নম্বর। অবশ্যই ১১ ডিজিটের হতে হবে এবং ০১ দিয়ে শুরু হতে হবে।");
+        setIsLoading(false);
+        return;
+      }
+
+      const res = await fetch(`/api/auth/check-phone?phoneNumber=${cleanPhone}`);
+      const checkData = await res.json();
+      if (checkData.exists) {
+        showToast.error("এই ফোন নম্বরটি ইতিমধ্যে নিবন্ধিত হয়েছে।");
+        setIsLoading(false);
+        return;
+      }
+
+      setTempSignupData({
+        ...data,
+        phoneNumber: cleanPhone
+      });
+      setShowVerifyModal(true);
+    } catch (err) {
+      console.error("Error verifying phone number:", err);
+      showToast.error("একটি ত্রুটি ঘটেছে। অনুগ্রহ করে আবার চেষ্টা করুন।");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifySuccess = async () => {
+    if (!tempSignupData) return;
+    setIsLoading(true);
+    try {
+      let formattedPhone = tempSignupData.phoneNumber;
+      if (!formattedPhone.startsWith("+880")) {
+        const cleanPhone = formattedPhone.replace(/^0+/, '');
+        formattedPhone = `+880${cleanPhone}`;
+      }
 
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: signupData.name,
-          email: signupData.email,
-          phoneNumber: signupData.phoneNumber,
-          password: signupData.password,
+          fullName: tempSignupData.name,
+          email: tempSignupData.email,
+          phoneNumber: formattedPhone,
+          password: tempSignupData.password,
           userType: 'affiliate'
         }),
       });
@@ -87,6 +145,7 @@ export default function AffiliateSignupForm() {
       showToast.error("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
+      setShowVerifyModal(false);
     }
   };
 
@@ -311,6 +370,17 @@ export default function AffiliateSignupForm() {
           {isLoading ? "অ্যাকাউন্ট তৈরি হচ্ছে..." : "নিবন্ধন করুন"}
         </Button>
       </form>
+
+      {tempSignupData && (
+        <PhoneVerificationModal
+          isOpen={showVerifyModal}
+          onClose={() => setShowVerifyModal(false)}
+          phoneNumber={tempSignupData.phoneNumber}
+          onVerifySuccess={handleVerifySuccess}
+          language={language}
+          checkExists={true}
+        />
+      )}
     </div>
   );
 }

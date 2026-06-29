@@ -6,8 +6,20 @@ export async function POST() {
     { status: 200 }
   );
 
-  // Clear the admin_token cookie
-  response.cookies.set('admin_token', '', {
+  // Clear the admin cookies
+  response.cookies.set('admin_access_token', '', {
+    httpOnly: true,
+    expires: new Date(0),
+    path: '/',
+  });
+
+  response.cookies.set('admin_refresh_token', '', {
+    httpOnly: true,
+    expires: new Date(0),
+    path: '/',
+  });
+
+  response.cookies.set('admin_temp_otp', '', {
     httpOnly: true,
     expires: new Date(0),
     path: '/',

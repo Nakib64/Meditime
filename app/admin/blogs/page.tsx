@@ -300,19 +300,6 @@ export default function BlogsPage() {
                   </div>
                 )}
               </div>
-
-              <div className="space-y-4 flex flex-col justify-center">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary"
-                  />
-                  <Label htmlFor="isActive">Is Active</Label>
-                </div>
-              </div>
             </div>
 
             <div className="flex gap-4 pt-4">
