@@ -10,6 +10,7 @@ import { Calendar, Clock, ArrowLeft, Loader2, Tag, Gift, ChevronRightIcon } from
 import { useLanguage } from "@/contexts/LanguageContext";
 import { homepageTranslations } from "@/lib/homepage-translations";
 import Nav_for_details from "@/components/nav_for_details";
+import Footer from "@/components/footer";
 
 interface Offer {
   _id: string;
@@ -219,6 +220,7 @@ export default function OfferPostPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

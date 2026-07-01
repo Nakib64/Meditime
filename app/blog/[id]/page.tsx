@@ -11,6 +11,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { homepageTranslations } from "@/lib/homepage-translations";
 import { formatBlogDate } from "@/lib/time-utils";
 import Nav_for_details from "@/components/nav_for_details";
+import Footer from "@/components/footer";
 
 interface Blog {
   _id: string;
@@ -235,6 +236,7 @@ export default function BlogPostPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
