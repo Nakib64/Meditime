@@ -376,8 +376,8 @@ export default function Navbar() {
                         {(user as any)?.photo ? (
                           <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-primary/30">
                             <Image
-                              src={(user as any).photo}
-                              alt={user.fullName || "User"}
+                              src={(user as any).photo }
+                              alt={user.fullName?.charAt(0)?.toUpperCase() || "User"}
                               fill
                               className="object-cover"
                             />

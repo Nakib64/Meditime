@@ -393,7 +393,7 @@ export default function LoginPage() {
 
                       {/* Google Sign-in Button */}
                       <div className="w-full flex justify-center mb-6">
-                        <div id="google-login-button" className="w-full" />
+                        <div id="google-login-button" className="w-full flex justify-center" />
                       </div>
 
                       <p className="mt-6 text-center text-sm text-gray-600">

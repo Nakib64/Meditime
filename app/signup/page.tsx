@@ -419,7 +419,7 @@ export default function SignupPage() {
 
                   {/* Google Sign-in Button */}
                   <div className="w-full flex justify-center mb-6">
-                    <div id="google-signup-button" className="w-full" />
+                    <div id="google-signup-button" className="w-full flex justify-center" />
                   </div>
 
                   <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-600">

@@ -93,7 +93,7 @@ export default function HospitalPartnersSection() {
 
         {/* ── Marquee Slider ── */}
         <div className="relative w-full overflow-hidden py-10">
-          <div className="animate-marquee flex gap-8">
+          <div className="animate-marquee2 flex gap-8">
             {hospitals.map((hospital, idx) => {
               const medicalPlaceholders = [
                '/Hospital.png'

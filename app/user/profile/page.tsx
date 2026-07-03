@@ -49,6 +49,7 @@ const profileSchema = z
     ),
     password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
     confirmPassword: z.string().optional(),
+    currentPassword: z.string().optional().or(z.literal("")),
     photo: z.string().optional(),
   })
   .refine((data) => {
@@ -59,6 +60,15 @@ const profileSchema = z
   }, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => {
+    if (data.password && data.password.length > 0) {
+      return !!data.currentPassword && data.currentPassword.length > 0;
+    }
+    return true;
+  }, {
+    message: "Current password is required to change password",
+    path: ["currentPassword"],
   });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -105,6 +115,7 @@ export default function UserProfilePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const router = useRouter();
@@ -261,7 +272,10 @@ export default function UserProfilePage() {
         photo: photoUrl || "",
       };
 
-      if (data.password && data.password.length > 0) updateData.password = data.password;
+      if (data.password && data.password.length > 0) {
+        updateData.password = data.password;
+        updateData.currentPassword = data.currentPassword;
+      }
 
       const response = await fetch("/api/user/profile", {
         method: "PUT",
@@ -283,6 +297,7 @@ export default function UserProfilePage() {
         setSelectedImage(null);
         setValue("password", "");
         setValue("confirmPassword", "");
+        setValue("currentPassword", "");
       } else {
         showToast.error(result.error || "Failed to update profile");
       }
@@ -467,6 +482,14 @@ export default function UserProfilePage() {
                     {language === "bn" ? "নিরাপত্তা সেটিংস" : "Security Settings"}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2 relative md:col-span-2">
+                      <Label className="text-[10px] font-bold text-gray-400 uppercase">{language === 'bn' ? 'বর্তমান পাসওয়ার্ড' : 'Current Password'}</Label>
+                      <Input {...register("currentPassword")} type={showCurrentPassword ? "text" : "password"} className="h-12 rounded-xl bg-gray-50 border-gray-100 placeholder:text-gray-300" placeholder={language === 'bn' ? 'বর্তমান পাসওয়ার্ড লিখুন' : '••••••••'} />
+                      <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-4 top-[42px] text-gray-400 hover:text-primary">
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                      {errors.currentPassword && <p className="text-[10px] text-rose-500 font-bold uppercase">{errors.currentPassword.message}</p>}
+                    </div>
                     <div className="space-y-2 relative">
                       <Label className="text-[10px] font-bold text-gray-400 uppercase">{language === 'bn' ? 'নতুন পাসওয়ার্ড' : 'New Password'}</Label>
                       <Input {...register("password")} type={showPassword ? "text" : "password"} className="h-12 rounded-xl bg-gray-50 border-gray-100" placeholder="••••••••" />
