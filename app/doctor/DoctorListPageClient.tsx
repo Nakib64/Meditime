@@ -409,17 +409,17 @@ function DoctorListPageContent() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Debounce suggestions query (faster — 150ms)
+  // Debounce suggestions query (300ms delay as requested)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSuggestQuery(searchQuery);
-    }, 150);
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch dedicated suggestions (independent of main grid)
+  // Fetch dedicated suggestions (independent of main grid) - trigger if length >= 3
   useEffect(() => {
-    if (!debouncedSuggestQuery || debouncedSuggestQuery.length < 1) {
+    if (!debouncedSuggestQuery || debouncedSuggestQuery.length < 3) {
       setSuggestionDoctors([]);
       return;
     }
@@ -812,18 +812,33 @@ function DoctorListPageContent() {
                           setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
                         }}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-bold text-gray-800 text-base">
-                              {language === 'bn' && suggestion?.doctor?.nameBn ? suggestion?.doctor?.nameBn : suggestion?.doctor?.name || suggestion?.doctor?.nameBn}
-                            </div>
-                            {suggestion.doctor && (
-                              <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-                                <span className="text-primary font-medium">
-                                  {language === 'bn' && suggestion.doctor.specialtyBn ? suggestion.doctor.specialtyBn : suggestion.doctor.specialty || suggestion.doctor.specialtyBn}
-                                </span>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 flex-1">
+                            {suggestion.doctor?.image ? (
+                              <Image
+                                src={suggestion.doctor.image}
+                                alt={suggestion.doctor.name || "Doctor"}
+                                width={44}
+                                height={44}
+                                className="rounded-full object-cover w-11 h-11 border border-gray-100 flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                                <Stethoscope className="w-5 h-5" />
                               </div>
                             )}
+                            <div className="flex-1">
+                              <div className="font-bold text-gray-800 text-base">
+                                {language === 'bn' && suggestion?.doctor?.nameBn ? suggestion?.doctor?.nameBn : suggestion?.doctor?.name || suggestion?.doctor?.nameBn}
+                              </div>
+                              {suggestion.doctor && (
+                                <div className="text-sm text-gray-500 mt-0.5 flex items-center gap-2">
+                                  <span className="text-primary font-medium">
+                                    {language === 'bn' && suggestion.doctor.specialtyBn ? suggestion.doctor.specialtyBn : suggestion.doctor.specialty || suggestion.doctor.specialtyBn}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <span
                             className={`text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider ${suggestion.type === "Doctor"

@@ -8,6 +8,7 @@ import District from "@/models/District";
 import Division from "@/models/Division";
 import { generateUniqueSlug } from "@/lib/slug";
 import { verifyAdmin } from "@/lib/auth";
+import { normalizeSearchQuery, buildPhoneticRegex } from "@/lib/search-utils";
 
 
 // Force model output refreshing
@@ -45,20 +46,11 @@ export async function GET(request: NextRequest) {
 
     let query: any = {};
 
-    // Helper to build a fuzzy regex matching characters with optional punctuation/spaces
-    const buildFuzzyRegex = (term: string) => {
-      const cleanTerm = term.replace(/[\s.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
-      if (!cleanTerm) return null;
-      const escapedChars = Array.from(cleanTerm).map(char => {
-        return char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      });
-      return new RegExp(escapedChars.join("[\\s.-]*"), "i");
-    };
-
-    // Text search across multiple fields
+    // Text search across multiple fields using phonetic query logic
     if (search) {
-      const fullFuzzyRegex = buildFuzzyRegex(search);
-      const searchTerms = search.split(/\s+/).filter(Boolean);
+      const cleanSearch = normalizeSearchQuery(search);
+      const fullFuzzyRegex = buildPhoneticRegex(cleanSearch);
+      const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
 
       if (fullFuzzyRegex) {
         const fullQueryOr = [
@@ -76,7 +68,7 @@ export async function GET(request: NextRequest) {
 
         if (searchTerms.length > 1) {
           const termsAnd = searchTerms.map(term => {
-            const termFuzzy = buildFuzzyRegex(term);
+            const termFuzzy = buildPhoneticRegex(term);
             if (!termFuzzy) return null;
             return {
               $or: [

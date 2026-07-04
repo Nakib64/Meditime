@@ -47,6 +47,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 import { useLanguage } from "@/contexts/LanguageContext";
 import { homepageTranslations } from "@/lib/homepage-translations";
 import Image from "next/image";
+import Nav_for_details from "@/components/nav_for_details";
 
 export default function SignupPage() {
   const { language } = useLanguage() as { language: 'en' | 'bn' };
@@ -139,7 +140,7 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       const { confirmPassword, agreeToTerms, ...userData } = tempSignupData;
-      
+
       // Prepend +880 and strip leading zero if present
       let formattedPhone = userData.phoneNumber;
       if (!formattedPhone.startsWith("+880")) {
@@ -147,7 +148,7 @@ export default function SignupPage() {
         formattedPhone = `+880${cleanPhone}`;
       }
       userData.phoneNumber = formattedPhone;
-      
+
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -183,43 +184,57 @@ export default function SignupPage() {
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{
-      backgroundImage: "url('/slide.jpg')",
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-    }}>
-      <Navbar />
+    <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
+      <Nav_for_details />
       <div className="flex-1 flex items-center justify-center p-2 sm:p-4 pt-24 pb-16 md:pt-28 md:pb-20">
         <div className="w-full max-w-6xl">
-          <div className="bg-white/20 backdrop-blur-lg rounded-lg sm:rounded-3xl shadow-2xl overflow-hidden border border-white/30">
+          <div className="bg-white rounded-2xl sm:rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100">
             <div className="grid md:grid-cols-5 gap-0">
               {/* Left Section - Branding */}
-              <div className="hidden md:flex md:col-span-2 bg-gradient-to-br from-primary/20 to-primary-dark/20 p-6 lg:p-12 flex-col justify-center text-white">
-                <div className="space-y-4 lg:space-y-6">
-                  <div className="flex items-center gap-3 mb-4 lg:mb-8">
-                    <Image src="/SVG/asset-3.png" alt="Logo" width={200} height={50} />
-                  </div>
-                  <h2 className="text-3xl lg:text-5xl font-bold leading-tight">
-                    {t.signupTitle}
-                  </h2>
-                  <p className="text-base lg:text-lg text-white/90 leading-relaxed">
-                    {t.signupSubtitle}
-                  </p>
-                  <p className="text-sm lg:text-base text-white/80">
-                    {t.signupSubtitle2}
-                  </p>
+              <div
+                className="hidden md:block md:col-span-2 p-8 lg:p-12 text-white relative overflow-hidden min-h-[600px]"
+                style={{
+                  background: "linear-gradient(135deg, rgba(25, 50, 82, 0.92) 0%, rgba(1, 121, 145, 0.92) 50%, rgba(0, 177, 194, 0.92) 100%), url('/auth.png')",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              >
+                {/* Logo at the top */}
+                <div className="relative z-10">
+                  <Link href="/">
+                    <Image
+                      src="/SVG/asset-3.png"
+                      alt="Meditime Logo"
+                      width={180}
+                      height={45}
+                      className="object-contain brightness-0 invert"
+                    />
+                  </Link>
                 </div>
+
+                <div className="h-full flex items-center">
+                  {/* Subtitle / Branding content at the bottom */}
+                  <div className="space-y-6 relative z-10 mb-8">
+                    <h2 className="text-3xl lg:text-4xl font-extrabold leading-tight tracking-tight">
+                      {t.signupTitle}
+                    </h2>
+                    <p className="text-sm lg:text-base text-white/90 leading-relaxed font-light">
+                      {t.signupSubtitle}
+                    </p>
+                  </div>
+                </div>
+
               </div>
 
               {/* Right Section - Signup Form */}
-              <div className="md:col-span-3 lg:col-span-3 bg-white/95 backdrop-blur-sm p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[95vh] sm:max-h-[90vh]">
+              <div className="md:col-span-3 lg:col-span-3 bg-white/95 backdrop-blur-sm p-4 sm:p-6 lg:p-8 h-auto overflow-visible md:overflow-y-auto md:max-h-[90vh]">
                 <div className="max-w-md mx-auto">
                   <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t.createAccountTitle}</h3>
                   <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">{t.createAccountSubtitle}</p>
 
                   <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-3 sm:space-y-4">
                     <div>
-                    
+
                       {errors.userType && (
                         <p className="text-xs sm:text-sm text-red-500 mt-1">{errors.userType.message}</p>
                       )}
@@ -274,7 +289,7 @@ export default function SignupPage() {
                       {!isCheckingPhone && !phoneErrorMsg && errors.phoneNumber && (
                         <p className="text-xs sm:text-sm text-red-500 mt-1">{language === 'en' ? "Please provide 11 digits number (starting with 01). Example: 01XXXXXXXXX" : "অনুগ্রহ করে 11 ডিজিটের নম্বরটি দিন (01 দিয়ে শুরু করুন)। যেমন: 01XXXXXXXXX"}</p>
                       )}
-                 
+
                     </div>
 
                     <div>
