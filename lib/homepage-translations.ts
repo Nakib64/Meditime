@@ -677,7 +677,7 @@ export const homepageTranslations = {
       bookAppointmentBtn: "অ্যাপয়েন্টমেন্ট নিন",
       hospitalsTitle: "আপনার পাশের সেরা হাসপাতালের খোঁজ এখন এখানেই",
       hospitalsDesc: "সাভার ও আশেপাশের সেরা সেরা সব জেনারেল ও স্পেশালাইজড হাসপাতালের খোঁজ পান এক নিমিষেই।",
-      hospitalListBtn: "হাসপাতালের তালিকা দেখুন",
+      hospitalListBtn: "হাসপাতালের তালিকা",
       videoConsultTitle: "ভিডিও কলে পরামর্শ",
       videoConsultDesc: "চেম্বারে যাওয়ার ঝামেলা ছাড়াই ঘরে বসেই ভিডিও কলের মাধ্যমে বিশেষজ্ঞ ডাক্তারের পরামর্শ নিন।",
       bookConsultationBtn: "পরামর্শ শুরু করুন",
