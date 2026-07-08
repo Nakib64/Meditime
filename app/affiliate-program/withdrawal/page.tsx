@@ -6,8 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Navbar from "@/components/navbar";
-import Footer from "@/components/footer";
+import AffiliateSidebar from "@/components/affiliate-sidebar";
 import { 
   DollarSign, 
   Loader2, 
@@ -20,7 +19,7 @@ import { showToast } from "@/lib/toast";
 interface Affiliate {
   affiliateCode: string;
   walletBalance: number;
-  name: string;
+  fullName: string;
   email: string;
 }
 
@@ -34,7 +33,6 @@ export default function WithdrawalRequestPage() {
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Fetch latest wallet balance from server to avoid stale localStorage data
   const fetchWalletData = async (code: string, baseAffiliate: Affiliate) => {
     try {
       const response = await fetch(`/api/affiliate/wallet?affiliateCode=${code}`);
@@ -47,10 +45,8 @@ export default function WithdrawalRequestPage() {
         };
 
         setAffiliate(updatedAffiliate);
-        // Keep localStorage in sync so other pages see the correct balance
         localStorage.setItem("affiliate", JSON.stringify(updatedAffiliate));
       } else {
-        // If wallet API fails, at least keep the basic affiliate info
         setAffiliate(baseAffiliate);
       }
     } catch (error) {
@@ -62,7 +58,6 @@ export default function WithdrawalRequestPage() {
   };
 
   useEffect(() => {
-    // Check if affiliate is logged in
     const affiliateData = localStorage.getItem("affiliate");
     if (!affiliateData) {
       router.push("/affiliate-program");
@@ -71,7 +66,6 @@ export default function WithdrawalRequestPage() {
 
     try {
       const parsedData = JSON.parse(affiliateData);
-      // Always use latest wallet balance from backend if possible
       if (parsedData.affiliateCode) {
         fetchWalletData(parsedData.affiliateCode, parsedData);
       } else {
@@ -92,7 +86,6 @@ export default function WithdrawalRequestPage() {
 
     const requestedAmount = parseFloat(amount);
 
-    // Validation
     if (!requestedAmount || requestedAmount <= 0) {
       showToast.error("Please enter a valid amount");
       return;
@@ -121,7 +114,7 @@ export default function WithdrawalRequestPage() {
 
       if (response.ok) {
         showToast.success("Withdrawal request submitted successfully!");
-        router.push("/affiliate-program/dashboard");
+        router.push("/affiliate-program/dashboard?tab=withdrawals");
       } else {
         showToast.error(data.error || "Failed to submit withdrawal request");
       }
@@ -133,12 +126,18 @@ export default function WithdrawalRequestPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("affiliate");
+    showToast.success("Successfully logged out!");
+    router.push("/affiliate-program");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00B1C2] mx-auto mb-4"></div>
+          <p className="text-[#017991] text-base">Loading...</p>
         </div>
       </div>
     );
@@ -149,109 +148,122 @@ export default function WithdrawalRequestPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
+    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+      {/* Decoupled Administrative Sidebar */}
+      <AffiliateSidebar
+        activeTab="withdrawals"
+        affiliate={affiliate}
+        onLogout={handleLogout}
+      />
 
-      <div className="flex-1 pt-20 pb-16">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h1
-              className="text-3xl font-bold text-gray-900"
-             
+      {/* Main Administrative Withdrawal content area */}
+      <main className="flex-1 lg:ml-64 overflow-y-auto h-screen relative pt-16 lg:pt-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="p-6 lg:p-8">
+          {/* Header Row */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-5 border-b border-gray-200">
+            <div>
+              <h1 className="text-2xl font-bold text-[#193252] tracking-tight">
+                উইথড্র রিকোয়েস্ট
+              </h1>
+              <p className="text-gray-500 text-sm mt-1">
+                Available Balance: <span className="font-bold text-emerald-600">৳{(affiliate.walletBalance || 0).toLocaleString()}</span>
+              </p>
+            </div>
+            <Button
+              onClick={() => router.push("/affiliate-program/dashboard?tab=withdrawals")}
+              variant="outline"
+              className="border-gray-200 text-gray-700 hover:bg-gray-50 bg-white shadow-sm text-sm font-semibold"
             >
-              উইথড্র রিকোয়েস্ট
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Available Balance: ৳{(affiliate.walletBalance || 0).toLocaleString()}
-            </p>
+              Back to Dashboard
+            </Button>
           </div>
 
-          <Card className="p-6 shadow-lg">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Withdrawal Amount */}
-              <div>
-                <Label htmlFor="amount">
-                  Withdrawal Amount (BDT) *
-                </Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  className="mt-1"
-                  min="1"
-                  max={affiliate.walletBalance}
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Maximum: ৳{(affiliate.walletBalance || 0).toLocaleString()}
-                </p>
-              </div>
-
-              {/* Notes */}
-              <div className="p-4 bg-gray-50 rounded-lg space-y-2">
-                <h3 className="font-semibold text-gray-900">
-                  Additional Notes (Optional)
-                </h3>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any notes for the admin (optional)..."
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  rows={3}
-                />
-              </div>
-
-              {/* Info Alert */}
-              <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg flex gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-semibold mb-1">Important:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Your withdrawal request will be reviewed by our admin team</li>
-                    <li>The requested amount will be deducted from your wallet immediately after submitting the request</li>
-                    <li>You can only request up to your current wallet balance</li>
-                    <li>Processing may take 2-5 business days</li>
-                  </ul>
+          <div className="max-w-2xl mx-auto">
+            <Card className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Withdrawal Amount */}
+                <div>
+                  <Label htmlFor="amount" className="text-gray-700 font-semibold text-sm">
+                    Withdrawal Amount (BDT) *
+                  </Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="mt-1.5 bg-white border-gray-300 text-gray-900 focus:border-[#00B1C2] focus:ring-[#00B1C2]"
+                    min="1"
+                    max={affiliate.walletBalance}
+                    required
+                  />
+                  <p className="text-xs text-gray-400 mt-1.5 font-medium">
+                    Maximum allowed BDT: ৳{(affiliate.walletBalance || 0).toLocaleString()}
+                  </p>
                 </div>
-              </div>
 
-              {/* Submit Button */}
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/affiliate-program/dashboard")}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Submitting Request...
-                    </>
-                  ) : (
-                    <>
-                      <DollarSign className="h-4 w-4 mr-2" />
-                      Submit Withdrawal Request
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Card>
+                {/* Notes */}
+                <div className="p-4 bg-gray-50/50 border border-gray-100 rounded-xl space-y-2">
+                  <h3 className="font-bold text-sm text-[#193252]">
+                    Additional Notes (Optional)
+                  </h3>
+                  <textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add any notes for the admin (optional)..."
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#00B1C2] focus:border-[#00B1C2]"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Info Alert */}
+                <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-blue-800 leading-relaxed">
+                    <p className="font-bold text-sm mb-1 text-blue-900">Important Info:</p>
+                    <ul className="list-disc list-inside space-y-1 font-medium">
+                      <li>Your withdrawal request will be reviewed by our admin team.</li>
+                      <li>The requested amount will be deducted from your wallet immediately after submission.</li>
+                      <li>You can only request up to your current available wallet balance.</li>
+                      <li>Processing withdrawals may take 2-5 business days.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/affiliate-program/dashboard?tab=withdrawals")}
+                    className="flex-1 border-gray-200 text-gray-500 hover:text-gray-800 bg-white text-sm font-semibold"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-sm font-semibold"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Submitting Request...
+                      </>
+                    ) : (
+                      <>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Submit Request
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
         </div>
-      </div>
-
-      <Footer />
+      </main>
     </div>
   );
 }

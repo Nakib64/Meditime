@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Affiliate from '@/models/Affiliate';
+import User from '@/models/User';
 import AffiliateCommission from '@/models/AffiliateCommission';
 import AffiliateWithdrawal from '@/models/AffiliateWithdrawal';
 import Appointment from '@/models/Appointment';
@@ -10,8 +11,10 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    // Get total affiliates
-    const totalAffiliates = await Affiliate.countDocuments({ isActive: true });
+    // Get total active affiliates from both collections
+    const totalUserAffiliates = await User.countDocuments({ userType: 'affiliate', isActive: true });
+    const totalLegacyAffiliates = await Affiliate.countDocuments({ isActive: true });
+    const totalAffiliates = totalUserAffiliates + totalLegacyAffiliates;
 
     // Get current month date range
     const now = new Date();

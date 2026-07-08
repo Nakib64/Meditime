@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import AffiliateCommission from '@/models/AffiliateCommission';
 import Affiliate from '@/models/Affiliate';
+import User from '@/models/User';
 
 // PUT - Approve commission and credit affiliate wallet
 export async function PUT(
@@ -38,8 +39,12 @@ export async function PUT(
     commission.approvedAt = new Date();
     await commission.save();
 
-    // Update affiliate wallet
-    const affiliate = await Affiliate.findById(commission.affiliateId);
+    // Update affiliate wallet - check User first, then legacy Affiliate model
+    let affiliate = await User.findById(commission.affiliateId);
+    if (!affiliate) {
+      affiliate = await Affiliate.findById(commission.affiliateId);
+    }
+
     if (affiliate) {
       affiliate.walletBalance = (affiliate.walletBalance || 0) + commission.commissionAmount;
       affiliate.totalEarned = (affiliate.totalEarned || 0) + commission.commissionAmount;
@@ -48,11 +53,21 @@ export async function PUT(
       await affiliate.save();
     }
 
-    await commission.populate('affiliateId', 'name affiliateCode email');
+    // Manually format and populate response
+    const affObj: any = await User.findById(commission.affiliateId).lean() || await Affiliate.findById(commission.affiliateId).lean();
+    const populatedCommission = commission.toObject();
+    if (affObj) {
+      populatedCommission.affiliateId = {
+        _id: affObj._id.toString(),
+        name: (affObj as any).fullName || (affObj as any).name || "",
+        affiliateCode: affObj.affiliateCode,
+        email: affObj.email,
+      };
+    }
 
     return NextResponse.json({
       message: 'Commission approved and credited to affiliate wallet',
-      commission,
+      commission: populatedCommission,
     });
   } catch (error: any) {
     console.error('Error approving commission:', error);

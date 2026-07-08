@@ -245,14 +245,6 @@ export default function Navbar() {
                     {language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard'}
                   </Link>
                 </>
-              ) : affiliate ? (
-                <Link
-                  href="/affiliate-program/dashboard"
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-primary font-bold text-sm shadow-lg  "
-                >
-                  <Wallet className="h-4 w-4" />
-                  {language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard'}
-                </Link>
               ) : (
                 <>
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>

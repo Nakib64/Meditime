@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import AffiliateWithdrawal from '@/models/AffiliateWithdrawal';
+import User from '@/models/User';
+import Affiliate from '@/models/Affiliate';
 
 // PUT - Process withdrawal request (approve or reject)
 export async function PUT(
@@ -23,7 +25,7 @@ export async function PUT(
     }
 
     // Find withdrawal request
-    const withdrawal = await AffiliateWithdrawal.findById(id).populate('affiliateId');
+    const withdrawal = await AffiliateWithdrawal.findById(id);
     if (!withdrawal) {
       return NextResponse.json(
         { error: 'Withdrawal request not found' },
@@ -39,8 +41,25 @@ export async function PUT(
       );
     }
 
+    // Find affiliate - check User model first, then legacy Affiliate model
+    let affiliate = await User.findById(withdrawal.affiliateId);
+    if (!affiliate) {
+      affiliate = await Affiliate.findById(withdrawal.affiliateId);
+    }
+
+    if (!affiliate) {
+      return NextResponse.json(
+        { error: 'Affiliate not found' },
+        { status: 404 }
+      );
+    }
+
     if (action === 'approve') {
-      // Approve withdrawal (wallet was already deducted at request time)
+      // Approve withdrawal (wallet balance was already deducted at request time)
+      // Increment totalWithdrawn now on approval
+      affiliate.totalWithdrawn = (affiliate.totalWithdrawn || 0) + withdrawal.amount;
+      await affiliate.save();
+
       withdrawal.status = 'approved';
       withdrawal.processedBy = adminId;
       withdrawal.processedAt = new Date();
@@ -59,6 +78,10 @@ export async function PUT(
           { status: 400 }
         );
       }
+
+      // Refund withdrawal amount back to affiliate's walletBalance on rejection
+      affiliate.walletBalance = (affiliate.walletBalance || 0) + withdrawal.amount;
+      await affiliate.save();
 
       withdrawal.status = 'rejected';
       withdrawal.processedBy = adminId;

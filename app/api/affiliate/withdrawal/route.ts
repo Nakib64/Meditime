@@ -58,9 +58,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Immediately deduct from wallet at request time
+    // Immediately deduct from wallet at request time, but do NOT increment totalWithdrawn yet
     affiliate.walletBalance = currentBalance - amount;
-    affiliate.totalWithdrawn = (affiliate.totalWithdrawn || 0) + amount;
     await affiliate.save();
 
     // Create withdrawal request (admin will only approve/reject, no more balance changes)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Affiliate from '@/models/Affiliate';
+import User from '@/models/User';
 import AffiliateCommission from '@/models/AffiliateCommission';
 import Appointment from '@/models/Appointment';
 
@@ -17,11 +18,33 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
-    // Get all active affiliates
-    const affiliates = await Affiliate.find({ isActive: true });
+    // Fetch active affiliates from both User and Affiliate collections
+    const userAffiliates = await User.find({ userType: 'affiliate', isActive: true }).lean();
+    const legacyAffiliates = await Affiliate.find({ isActive: true }).lean();
+
+    const combinedAffiliates = [
+      ...userAffiliates.map((aff: any) => ({
+        _id: aff._id,
+        name: aff.fullName,
+        affiliateCode: aff.affiliateCode,
+        email: aff.email,
+        phoneNumber: aff.phoneNumber,
+        walletBalance: aff.walletBalance || 0,
+        totalEarned: aff.totalEarned || 0,
+      })),
+      ...legacyAffiliates.map((aff: any) => ({
+        _id: aff._id,
+        name: aff.name,
+        affiliateCode: aff.affiliateCode,
+        email: aff.email,
+        phoneNumber: aff.phoneNumber,
+        walletBalance: aff.walletBalance || 0,
+        totalEarned: aff.totalEarned || 0,
+      }))
+    ];
 
     const report = await Promise.all(
-      affiliates.map(async (affiliate) => {
+      combinedAffiliates.map(async (affiliate) => {
         // Get bookings this month
         const bookings = await Appointment.countDocuments({
           affiliateId: affiliate._id,

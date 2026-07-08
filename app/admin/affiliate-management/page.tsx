@@ -54,17 +54,43 @@ export default function AffiliateManagementPage() {
 
   const handleStatusUpdate = async (requestId: string, newStatus: string) => {
     try {
-      const response = await fetch("/api/admin/affiliate-requests", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId, status: newStatus }),
-      });
+      if (newStatus === "approved") {
+        const commissionInput = prompt("Enter commission amount for this referral (BDT):", "500");
+        if (commissionInput === null) return; // User cancelled
 
-      if (response.ok) {
-        showToast.success(`Request ${newStatus} successfully`);
-        fetchRequests();
+        const commissionAmount = parseFloat(commissionInput);
+        if (isNaN(commissionAmount) || commissionAmount <= 0) {
+          showToast.error("Please enter a valid positive commission amount");
+          return;
+        }
+
+        const response = await fetch("/api/admin/affiliate-requests/approve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requestId, commissionAmount }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          showToast.success(`Request approved with ৳${commissionAmount} commission credited!`);
+          fetchRequests();
+        } else {
+          showToast.error(data.error || "Failed to approve request");
+        }
       } else {
-        showToast.error("Failed to update status");
+        const response = await fetch("/api/admin/affiliate-requests", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requestId, status: newStatus }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          showToast.success("Request rejected successfully");
+          fetchRequests();
+        } else {
+          showToast.error(data.error || "Failed to update status");
+        }
       }
     } catch (error) {
       console.error("Error updating status:", error);

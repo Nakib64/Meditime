@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { 
   TrendingUp, 
@@ -17,8 +18,19 @@ import { Button } from "@/components/ui/button";
 // Import the form components
 import AffiliateSignupForm from "@/components/affiliate-signup-form";
 import AffiliateSigninForm from "@/components/affiliate-signin-form";
+
 export default function AffiliateProgramPage() {
   const [showSignup, setShowSignup] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const affiliateData = localStorage.getItem("affiliate");
+      if (affiliateData) {
+        router.push("/affiliate-program/dashboard");
+      }
+    }
+  }, [router]);
 
   const features = [
     {
@@ -113,7 +125,7 @@ export default function AffiliateProgramPage() {
           <h2
             className="text-4xl md:text-5xl font-bold mb-6"
             style={{
-              color: "#009A98",
+              color: "var(--background-dark)",
             }}
           >
             How To Make Money By Becoming an Affiliate
@@ -136,7 +148,7 @@ export default function AffiliateProgramPage() {
           <h2
             className="text-3xl md:text-4xl font-bold mb-8 text-center"
             style={{
-              color: "#009A98",
+              color: "var(--background-dark)",
             }}
           >
             Why Choose Meditime Affiliate Programme
