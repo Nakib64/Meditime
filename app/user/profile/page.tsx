@@ -40,7 +40,7 @@ const profileSchema = z
   .object({
     fullName: z.string().min(2, "Full name is required"),
     email: z.string().email("Invalid email address").optional().or(z.literal("")),
-    phoneNumber: z.string().min(10, "Phone number must be at least 10 digits").regex(/^[0-9]+$/, "Phone number must contain only digits"),
+    phoneNumber: z.string().length(11, "Phone number must be exactly 11 digits").regex(/^[0-9]+$/, "Phone number must contain only digits"),
     gender: z.enum(["male", "female", "other"], { error: "Gender is required" }),
     bloodGroup: z.string().optional(),
     age: z.preprocess(
@@ -143,7 +143,7 @@ export default function UserProfilePage() {
       
       setValue("fullName", parsedData.fullName || "");
       setValue("email", parsedData.email || "");
-      setValue("phoneNumber", parsedData.phoneNumber || "");
+      setValue("phoneNumber", (parsedData.phoneNumber || "").replace(/^\+?88/, "") || "");
       setValue("gender", (parsedData.gender as "male" | "female" | "other") || "male");
       setValue("bloodGroup", parsedData.bloodGroup || "");
       setValue("age", (parsedData.age || "") as any);
@@ -261,11 +261,17 @@ export default function UserProfilePage() {
         }
       }
 
+      let formattedPhone = data.phoneNumber;
+      if (!formattedPhone.startsWith("+880")) {
+        const cleanPhone = formattedPhone.replace(/^0+/, '');
+        formattedPhone = `+880${cleanPhone}`;
+      }
+
       const updateData: any = {
         userId: user.id,
         fullName: data.fullName,
         email: data.email || "",
-        phoneNumber: data.phoneNumber,
+        phoneNumber: formattedPhone,
         gender: data.gender,
         bloodGroup: data.bloodGroup || "",
         age: data.age,
@@ -291,6 +297,7 @@ export default function UserProfilePage() {
           window.dispatchEvent(new Event("userLogin"));
           setUser(result.user);
           if (result.user.photo) setImagePreview(result.user.photo);
+          setValue("phoneNumber", (result.user.phoneNumber || "").replace(/^\+?88/, "") || "");
         }
         showToast.success("Profile updated successfully!");
         setIsEditing(false);
@@ -384,6 +391,13 @@ export default function UserProfilePage() {
                   setIsEditing(false);
                   setSelectedImage(null);
                   setImagePreview(user.photo || null);
+                  setValue("fullName", user.fullName || "");
+                  setValue("email", user.email || "");
+                  setValue("phoneNumber", (user.phoneNumber || "").replace(/^\+?88/, "") || "");
+                  setValue("gender", (user.gender as "male" | "female" | "other") || "male");
+                  setValue("bloodGroup", user.bloodGroup || "");
+                  setValue("age", (user.age || "") as any);
+                  setValue("photo", user.photo || "");
                 }}
                 className="rounded-2xl px-6 h-12 font-bold hover:bg-gray-50 transition-all"
               >
@@ -407,12 +421,32 @@ export default function UserProfilePage() {
                     {language === "bn" ? "ফোন নম্বর" : "Phone Number"}
                   </Label>
                   <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     {isEditing ? (
-                      <Input {...register("phoneNumber")} className="pl-12 h-14 rounded-2xl bg-gray-50 border-gray-100 focus:bg-white transition-all font-medium" />
+                      <div className="relative flex items-center w-full">
+                        <span className="absolute left-3 flex items-center gap-1.5 text-gray-500 text-sm border-r pr-2 h-6 border-gray-300 pointer-events-none select-none">
+                          <img src="https://flagcdn.com/w40/bd.png" alt="BD" className="w-6 h-4 rounded-sm object-cover" />
+                          <span>+88</span>
+                        </span>
+                        <Input
+                          type="tel"
+                          maxLength={11}
+                          {...register("phoneNumber", {
+                            onChange: (e) => {
+                              e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                            }
+                          })}
+                          className="pl-[5rem] h-14 w-full rounded-2xl bg-gray-50 border-gray-100 focus:bg-white transition-all font-medium"
+                        />
+                      </div>
                     ) : (
-                      <div className="pl-12 h-14 flex items-center text-gray-900 font-bold bg-gray-50/50 rounded-2xl px-4 border border-transparent">
-                        {user.phoneNumber}
+                      <div className="relative flex items-center w-full">
+                        <span className="absolute left-3 flex items-center gap-1.5 text-gray-500 text-sm border-r pr-2 h-6 border-gray-300 pointer-events-none select-none">
+                          <img src="https://flagcdn.com/w40/bd.png" alt="BD" className="w-6 h-4 rounded-sm object-cover" />
+                          <span>+88</span>
+                        </span>
+                        <div className="pl-[5rem] h-14 w-full flex items-center text-gray-900 font-bold bg-gray-50/50 rounded-2xl px-4 border border-transparent">
+                          {user.phoneNumber ? user.phoneNumber.replace(/^\+?88/, "") : ""}
+                        </div>
                       </div>
                     )}
                   </div>

@@ -22,7 +22,7 @@ export default function DashboardHeader({
 }: DashboardHeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
+      <div className="pl-10 lg:pl-0">
         <h1 className="text-3xl font-bold text-gray-900">
           {language === 'bn' ? 'আমার ড্যাশবোর্ড' : 'My Dashboard'}
         </h1>

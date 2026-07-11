@@ -507,28 +507,28 @@ export default function AmbulancePage() {
                 selectedThana ||
                 availabilityStatusFilter ||
                 vehicleTypeFilter) && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-6 flex justify-end pt-4 border-t border-gray-100 overflow-hidden"
-                >
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedDivision("");
-                      setSelectedDistrict("");
-                      setSelectedThana("");
-                      setAvailabilityStatusFilter("");
-                      setVehicleTypeFilter("");
-                    }}
-                    className="flex items-center gap-2 px-5 py-2.5 text-sm text-gray-600 hover:text-gray-900 border-gray-200 hover:border-gray-300 transition-all duration-200"
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-6 flex justify-end pt-4 border-t border-gray-100 overflow-hidden"
                   >
-                    <RotateCcw className="h-4 w-4" />
-                    {language === 'bn' ? 'রিসেট' : 'Reset'}
-                  </Button>
-                </motion.div>
-              )}
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedDivision("");
+                        setSelectedDistrict("");
+                        setSelectedThana("");
+                        setAvailabilityStatusFilter("");
+                        setVehicleTypeFilter("");
+                      }}
+                      className="flex items-center gap-2 px-5 py-2.5 text-sm text-gray-600 hover:text-gray-900 border-gray-200 hover:border-gray-300 transition-all duration-200"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      {language === 'bn' ? 'রিসেট' : 'Reset'}
+                    </Button>
+                  </motion.div>
+                )}
             </AnimatePresence>
           </Card>
 

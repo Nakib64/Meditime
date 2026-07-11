@@ -24,7 +24,6 @@ interface Offer {
   startDate?: string;
   endDate?: string;
   isActive: boolean;
-  isPopup: boolean;
 }
 
 export default function OffersPage() {
@@ -43,7 +42,6 @@ export default function OffersPage() {
     startDate: "",
     endDate: "",
     isActive: true,
-    isPopup: false,
   });
 
   useEffect(() => {
@@ -153,7 +151,6 @@ export default function OffersPage() {
       startDate: offer.startDate ? new Date(offer.startDate).toISOString().split('T')[0] : "",
       endDate: offer.endDate ? new Date(offer.endDate).toISOString().split('T')[0] : "",
       isActive: offer.isActive ?? true,
-      isPopup: offer.isPopup ?? false,
     });
     setImagePreview(offer.imageUrl || "");
     setShowForm(true);
@@ -196,7 +193,6 @@ export default function OffersPage() {
       startDate: "",
       endDate: "",
       isActive: true,
-      isPopup: false,
     });
     setImagePreview("");
   };

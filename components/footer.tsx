@@ -33,7 +33,7 @@ export default function Footer() {
     { icon: Facebook,      href: "https://www.facebook.com/meditime.com.bd", label: "Facebook"  },
     { icon: Instagram,     href: "#", label: "Instagram" },
     { icon: Linkedin,      href: "#", label: "LinkedIn"  },
-    { icon: Youtube,       href: "#", label: "YouTube"   },
+    { icon: Youtube,       href: "https://www.youtube.com/@Meditimehealth", label: "YouTube"   },
   ];
 
   // Figma exact values

@@ -427,7 +427,7 @@ export default function BloodDonorPage() {
                     <option value="">{language === 'en' ? "Select District" : "জেলা নির্বাচন করুন"}</option>
                     {districts.map((dist) => (
                       <option key={dist._id} value={dist._id}>
-                        {dist.name  }
+                        {dist.name}
                       </option>
                     ))}
                   </select>

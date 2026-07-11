@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Doctor from "@/models/Doctor";
+import Hospital from "@/models/Hospital";
+import Thana from "@/models/Thana";
+import District from "@/models/District";
+import Division from "@/models/Division";
 
 export async function GET(
   request: NextRequest,
@@ -27,7 +31,27 @@ export async function GET(
 
     // Extract current doctor properties
     const currentDept = doctor.department;
-    const currentHospitals = doctor.availability?.map((slot: any) => slot.hospital).filter(Boolean) || [];
+    const currentHospitalSlugs = doctor.availability?.map((slot: any) => slot.hospital).filter(Boolean) || [];
+
+    // Query location details (Thana, District, Division) of the current doctor's hospitals
+    let currentThanaIds: string[] = [];
+    let currentDistrictIds: string[] = [];
+    let currentDivisionIds: string[] = [];
+
+    if (currentHospitalSlugs.length > 0) {
+      const currentHospitals = await Hospital.find({ slug: { $in: currentHospitalSlugs } })
+        .populate({
+          path: "thana",
+          populate: {
+            path: "district"
+          }
+        })
+        .lean() as any[];
+
+      currentThanaIds = currentHospitals.map(h => h.thana?._id?.toString()).filter(Boolean);
+      currentDistrictIds = currentHospitals.map(h => h.thana?.district?._id?.toString()).filter(Boolean);
+      currentDivisionIds = currentHospitals.map(h => h.thana?.district?.division?.toString()).filter(Boolean);
+    }
 
     // Find candidates: same department OR same hospital
     // We only need a reasonable number of candidates to sort
@@ -35,13 +59,76 @@ export async function GET(
     
     const orConditions = [];
     if (currentDept) orConditions.push({ department: currentDept });
-    if (currentHospitals.length > 0) orConditions.push({ "availability.hospital": { $in: currentHospitals } });
+    if (currentHospitalSlugs.length > 0) orConditions.push({ "availability.hospital": { $in: currentHospitalSlugs } });
 
     if (orConditions.length > 0) {
       query.$or = orConditions;
     }
 
     let candidates = await Doctor.find(query).limit(100).lean() as any[];
+
+    // Extract all unique candidate hospital slugs to batch query location info
+    const candidateHospitalSlugs = Array.from(
+      new Set(
+        candidates.flatMap(c => c.availability?.map((slot: any) => slot.hospital).filter(Boolean) || [])
+      )
+    );
+
+    // Fetch locations for all candidates' hospitals
+    const hospitalsInfo = await Hospital.find({ slug: { $in: candidateHospitalSlugs } })
+      .populate({
+        path: "thana",
+        populate: {
+          path: "district"
+        }
+      })
+      .lean() as any[];
+
+    const hospitalLookup = new Map<string, any>();
+    for (const h of hospitalsInfo) {
+      hospitalLookup.set(h.slug, h);
+    }
+
+    // Function to calculate match score
+    const getCandidateScore = (c: any) => {
+      const isSameDept = currentDept && c.department === currentDept;
+      const cSlugs = c.availability?.map((slot: any) => slot.hospital).filter(Boolean) || [];
+      
+      let locationMaxScore = 0;
+      for (const slug of cSlugs) {
+        if (currentHospitalSlugs.includes(slug)) {
+          locationMaxScore = Math.max(locationMaxScore, 4);
+          continue;
+        }
+        
+        const hInfo = hospitalLookup.get(slug);
+        if (!hInfo || !hInfo.thana) continue;
+        
+        const thanaId = hInfo.thana._id?.toString();
+        if (thanaId && currentThanaIds.includes(thanaId)) {
+          locationMaxScore = Math.max(locationMaxScore, 3);
+          continue;
+        }
+        
+        const districtId = hInfo.thana.district?._id?.toString();
+        if (districtId && currentDistrictIds.includes(districtId)) {
+          locationMaxScore = Math.max(locationMaxScore, 2);
+          continue;
+        }
+
+        const divisionId = hInfo.thana.district?.division?.toString();
+        if (divisionId && currentDivisionIds.includes(divisionId)) {
+          locationMaxScore = Math.max(locationMaxScore, 1);
+          continue;
+        }
+      }
+
+      let totalScore = 0;
+      if (isSameDept) totalScore += 10;
+      totalScore += locationMaxScore;
+      
+      return totalScore;
+    };
 
     // If in Bangla mode, prioritize/filter doctors with Bangla names
     if (language === 'bn') {
@@ -59,20 +146,10 @@ export async function GET(
 
     // Sort by relevance score
     const sorted = candidates.sort((a, b) => {
-      // Relevance A
-      let relevanceA = 0;
-      if (a.department === currentDept) relevanceA += 10;
-      const aHospitals = a.availability?.map((slot: any) => slot.hospital).filter(Boolean) || [];
-      if (aHospitals.some((h: any) => currentHospitals.includes(h))) relevanceA += 5;
+      const scoreA = getCandidateScore(a);
+      const scoreB = getCandidateScore(b);
 
-      // Relevance B
-      let relevanceB = 0;
-      if (b.department === currentDept) relevanceB += 10;
-      const bHospitals = b.availability?.map((slot: any) => slot.hospital).filter(Boolean) || [];
-      if (bHospitals.some((h: any) => currentHospitals.includes(h))) relevanceB += 5;
-
-      // Secondary sort by relevance
-      if (relevanceA !== relevanceB) return relevanceB - relevanceA;
+      if (scoreA !== scoreB) return scoreB - scoreA;
 
       // Tertiary sort: prioritize doctors with images if scores are same
       if (a.image && !b.image) return -1;
