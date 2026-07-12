@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import NextImage from "next/image";
 import {
   LayoutDashboard,
   UserPlus,
@@ -38,6 +39,7 @@ interface User {
   username?: string;
   email?: string;
   phoneNumber?: string;
+  photo?: string;
 }
 
 interface SidebarProps {
@@ -266,7 +268,7 @@ export default function Sidebar({ user, onLogout }: SidebarProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-primary">MEDI TIME</h1>
+            <h1 className="text-xl font-bold text-primary">MEDITIME</h1>
             <button
               onClick={() => setIsMobileOpen(false)}
               className="lg:hidden p-1 hover:bg-gray-100 rounded"
@@ -307,11 +309,22 @@ export default function Sidebar({ user, onLogout }: SidebarProps) {
             {user ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-semibold">
-                      {(user.fullName || user.username || 'A').charAt(0).toUpperCase()}
-                    </span>
-                  </div>
+                  {user.photo ? (
+                    <div className="relative h-10 w-10 rounded-full overflow-hidden border border-gray-200">
+                      <NextImage
+                        src={user.photo}
+                        alt={user.fullName?.charAt(0)?.toUpperCase() || "U"}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary font-semibold">
+                        {(user.fullName || user.username || 'A').charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {user.fullName || user.username}

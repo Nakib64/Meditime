@@ -3,8 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
-    domains: ["i.ibb.co", "i.ibb.co.com", "wordpress.meditime.com.bd", "cdn.codeopx.com", "i.imgbb.com"],
+    domains: ["i.ibb.co", "i.ibb.co.com", "wordpress.meditime.com.bd", "cdn.codeopx.com", "i.imgbb.com", "lh3.googleusercontent.com"],
     remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
       {
         protocol: "https",
         hostname: "wordpress.meditime.com.bd",
