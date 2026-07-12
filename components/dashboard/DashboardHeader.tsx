@@ -32,8 +32,8 @@ export default function DashboardHeader({
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button 
-          onClick={onShowBookings} 
+        <Button
+          onClick={onShowBookings}
           className="bg-primary hover:bg-primary/90 text-white gap-2 rounded-xl shadow-lg transition-all py-6"
         >
           <Activity className="w-5 h-5" />
@@ -46,7 +46,7 @@ export default function DashboardHeader({
           )}
         </Button>
 
-        <Button 
+        <Button
           onClick={onClearHistory}
           variant="outline"
           disabled={isClearing}
@@ -56,8 +56,8 @@ export default function DashboardHeader({
           {language === 'bn' ? 'ইতিহাস মুছুন' : 'Clear History'}
         </Button>
 
-        <Button 
-          onClick={() => window.open('https://wa.me/8801610385555', '_blank')}
+        <Button
+          onClick={() => window.open('https://wa.me/01610384444', '_blank')}
           className="bg-[#25D366] hover:bg-[#128C7E] text-white gap-2 rounded-xl shadow-lg transition-all py-6"
         >
           <Phone className="w-5 h-5" />

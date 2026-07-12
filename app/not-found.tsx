@@ -13,21 +13,21 @@ export default function NotFound() {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse pointer-events-none" />
 
       <div className="max-w-2xl w-full text-center space-y-10 p-8 sm:p-12 glass rounded-[2.5rem] shadow-2xl border border-white/60 relative z-10 animate-in fade-in zoom-in duration-500">
-        
+
         {/* Animated Medical SVG Illustration */}
         <div className="flex justify-center">
           <div className="relative">
             {/* Pulsing circle background */}
             <div className="absolute inset-0 bg-primary/10 rounded-full scale-150 animate-ping opacity-25" />
-            
+
             <div className="relative bg-white/80 p-8 rounded-full shadow-lg border border-primary/20 flex items-center justify-center">
-              <svg 
-                className="w-24 h-24 text-primary animate-pulse" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="1.5" 
-                strokeLinecap="round" 
+              <svg
+                className="w-24 h-24 text-primary animate-pulse"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
                 strokeLinejoin="round"
               >
                 {/* Stethoscope head */}
@@ -47,11 +47,11 @@ export default function NotFound() {
           <div className="inline-block px-4 py-1.5 bg-primary/10 text-primary-dark font-bold text-sm rounded-full tracking-wide uppercase">
             Medi Time • ৪MD
           </div>
-          
+
           <h1 className="text-7xl sm:text-8xl font-black text-primary tracking-tighter drop-shadow-md select-none">
             404
           </h1>
-          
+
           <div className="space-y-2">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
               দুঃখিত, পাতাটি খুঁজে পাওয়া যায়নি!
@@ -113,7 +113,7 @@ export default function NotFound() {
           </button>
 
           <a
-            href="tel:+8801610385555"
+            href="tel:+01610384444"
             className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-primary transition-colors"
           >
             <PhoneCall className="h-4 w-4" />

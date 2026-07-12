@@ -140,7 +140,7 @@ export default function UserProfilePage() {
     try {
       const parsedData = JSON.parse(userData);
       setUser(parsedData);
-      
+
       setValue("fullName", parsedData.fullName || "");
       setValue("email", parsedData.email || "");
       setValue("phoneNumber", (parsedData.phoneNumber || "").replace(/^\+?88/, "") || "");
@@ -148,11 +148,11 @@ export default function UserProfilePage() {
       setValue("bloodGroup", parsedData.bloodGroup || "");
       setValue("age", (parsedData.age || "") as any);
       setValue("photo", parsedData.photo || "");
-      
+
       if (parsedData.photo) {
         setImagePreview(parsedData.photo);
       }
-      
+
       if (parsedData.id) {
         fetchAppointments(parsedData.id);
       }
@@ -331,7 +331,7 @@ export default function UserProfilePage() {
       <section className="relative overflow-hidden rounded-3xl bg-white p-8 shadow-sm border border-gray-100">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/5 rounded-full -ml-24 -mb-24 blur-3xl pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
           <div className="relative group">
             <div className="h-32 w-32 rounded-3xl overflow-hidden shadow-2xl border-4 border-white transition-transform group-hover:scale-105 duration-300">
@@ -350,7 +350,7 @@ export default function UserProfilePage() {
               </label>
             )}
           </div>
-          
+
           <div className="flex-1 text-center md:text-left space-y-2">
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <h1 className="text-4xl font-black text-gray-900 tracking-tight">
@@ -377,15 +377,15 @@ export default function UserProfilePage() {
 
           <div className="flex gap-3">
             {!isEditing ? (
-              <Button 
-                onClick={() => setIsEditing(true)} 
+              <Button
+                onClick={() => setIsEditing(true)}
                 className="rounded-2xl px-8 h-12 font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95"
               >
                 <Edit className="h-4 w-4 mr-2" />
                 {language === "bn" ? "প্রোফাইল সম্পাদন" : "Edit Profile"}
               </Button>
             ) : (
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => {
                   setIsEditing(false);
@@ -585,8 +585,8 @@ export default function UserProfilePage() {
                           </div>
                           <div>
                             <h4 className="text-lg font-black text-gray-900 group-hover:text-primary transition-colors" >
-                              {language === 'bn' 
-                                ? (appointment.doctorId?.nameBn || '') 
+                              {language === 'bn'
+                                ? (appointment.doctorId?.nameBn || '')
                                 : (appointment.doctorId?.name || 'Doctor')}
                             </h4>
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter flex items-center gap-1" >
@@ -620,7 +620,7 @@ export default function UserProfilePage() {
               <Activity className="h-4 w-4" />
               {language === 'bn' ? 'কার্যকলাপ' : 'Activity Stats'}
             </h3>
-            
+
             <div className="space-y-8">
               <div className="flex items-end justify-between">
                 <div>
@@ -677,10 +677,10 @@ export default function UserProfilePage() {
             <p className="text-sm font-medium text-white/70 mb-6" >
               {language === 'bn' ? 'আমাদের ২৪/৭ সাপোর্ট টিম আপনার মেডিকেল অ্যাপয়েন্টমেন্টে সহায়তা করতে এখানে আছে।' : 'Our 24/7 support team is here to assist with your medical appointments.'}
             </p>
-            <Button 
+            <Button
               className="w-full rounded-xl bg-white text-primary font-black hover:bg-white/90 active:scale-95 transition-all"
-              onClick={() => window.open('https://wa.me/8801610385555', '_blank')}
-              
+              onClick={() => window.open('https://wa.me/01610384444', '_blank')}
+
             >
               {language === 'bn' ? 'সাপোর্টের সাথে যোগাযোগ করুন' : 'Contact Support'}
             </Button>
