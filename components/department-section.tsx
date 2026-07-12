@@ -133,10 +133,10 @@ export default function DepartmentSection() {
             return (
               <Link
                 key={`${dept._id}-${idx}`}
-                href={`/departments/${dept.name}`}
+                href={`/departments/${encodeURIComponent(dept.name)}`}
                 className="btn-slide group  w-[260px] h-[320px] border border-primary bg-white flex flex-col items-center justify-between shrink-0 rounded-3xl p-8 "
               >
-                {/* Large Icon centerpiece */}
+                {/* Large Icon centerpiece */} 
                 <div className="relative z-10 w-full flex-grow flex items-center justify-center p-2">
                   <Image
                     src={iconPath}
