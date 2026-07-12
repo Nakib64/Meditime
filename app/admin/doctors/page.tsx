@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,40 +30,8 @@ export default function DoctorsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const limit = 12;
   const { language: currentLanguage, setLanguage } = useLanguage();
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-  const getBengaliDay = (day: string): string => {
-    const dayIndex = daysOfWeek.indexOf(day);
-    return dayIndex >= 0 ? banglaDaysFull[dayIndex] : day;
-  };
-
-  const areDaysConsecutive = (sortedDays: string[]): boolean => {
-    if (sortedDays.length <= 1) return true;
-    for (let i = 1; i < sortedDays.length; i++) {
-      const prevIndex = daysOfWeek.indexOf(sortedDays[i - 1]);
-      const currIndex = daysOfWeek.indexOf(sortedDays[i]);
-      if (currIndex - prevIndex !== 1) return false;
-    }
-    return true;
-  };
-
-  const formatAvailability = (availability: any): string => {
-    const slots = Array.isArray(availability) ? availability : [availability];
-    return slots.map((slot) => {
-      const sortedDays = (slot.days || []).sort((a: string, b: string) => daysOfWeek.indexOf(a) - daysOfWeek.indexOf(b));
-      if (!sortedDays.length) return "";
-      
-      const time = (currentLanguage === 'bn' && slot.timeBn) ? slot.timeBn : (slot.time || "");
-      const consecutive = areDaysConsecutive(sortedDays);
-      
-      if (sortedDays.length === 1) return `${getBengaliDay(sortedDays[0])} ${time}`;
-      if (consecutive) {
-        return `${getBengaliDay(sortedDays[0])} থেকে ${getBengaliDay(sortedDays[sortedDays.length - 1])} ${time}`;
-      }
-      return `${sortedDays.map((d: string) => getBengaliDay(d)).join(", ")} ${time}`;
-    }).join("। ");
-  };
+  
 
   const fetchHospitals = async () => {
     try {
@@ -77,55 +45,62 @@ export default function DoctorsPage() {
     }
   };
 
-  // Fetch paginated and searched doctors
-  const fetchDoctors = useCallback(async (page: number) => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      params.append("page", page.toString());
-      params.append("limit", limit.toString());
-      if (debouncedSearchQuery) params.append("search", debouncedSearchQuery);
-      
-      const response = await fetch(`/api/doctors?${params.toString()}`);
-      const data = await response.json();
-      if (response.ok) {
-        setDoctors(data.doctors || []);
-        setTotal(data.total || 0);
-        setTotalPages(data.totalPages || 1);
-      } else {
-        showToast.error(data.error || "Failed to fetch doctors");
-      }
-    } catch (error) {
-      console.error("Error fetching doctors:", error);
-      showToast.error("Failed to fetch doctors");
-    } finally {
-      setLoading(false);
-      setIsInitialLoad(false);
-    }
-  }, [debouncedSearchQuery]);
-
   // Load initial hospitals list
   useEffect(() => {
     fetchHospitals();
   }, []);
 
-  // Debounce search query changes to prevent race conditions
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Trigger search fetch whenever page or debounced query changes
-  useEffect(() => {
-    fetchDoctors(currentPage);
-  }, [currentPage, debouncedSearchQuery, fetchDoctors]);
-
-  // Reset page to 1 whenever debounced search query changes
+  // Reset page to 1 whenever search query changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery]);
+  }, [searchQuery]);
+
+  // Fetch paginated and searched doctors with 150ms debounce and AbortController to prevent lag and race conditions
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams();
+        params.append("page", currentPage.toString());
+        params.append("limit", limit.toString());
+        
+        const trimmedQuery = searchQuery.trim();
+        if (trimmedQuery) {
+          params.append("search", trimmedQuery);
+        }
+        
+        const response = await fetch(`/api/doctors?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+          setDoctors(data.doctors || []);
+          setTotal(data.total || 0);
+          setTotalPages(data.totalPages || 1);
+        } else {
+          showToast.error(data.error || "Failed to fetch doctors");
+        }
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name !== "AbortError") {
+          console.error("Error fetching doctors:", error);
+          showToast.error("Failed to fetch doctors");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          setIsInitialLoad(false);
+        }
+      }
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [currentPage, searchQuery]);
 
   const handleDelete = async (id: string) => {
     if (!confirm(currentLanguage === 'bn' ? "আপনি কি নিশ্চিত যে আপনি এই ডিটেইলসটি মুছে ফেলতে চান?" : "Are you sure you want to delete this doctor profile?")) return;

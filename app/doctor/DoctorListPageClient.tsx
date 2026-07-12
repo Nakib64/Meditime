@@ -424,7 +424,7 @@ function DoctorListPageContent() {
       const fetchSuggestions = async () => {
         try {
           const res = await fetch(
-            `/api/doctors?search=${encodeURIComponent(q)}&limit=100&suggestions=true`,
+            `/api/doctors?search=${encodeURIComponent(q)}&suggestions=true`,
             { signal: controller.signal }
           );
           const data = await res.json();
