@@ -32,6 +32,14 @@ function levenshteinSimilarity(a: string, b: string): number {
   return 1 - matrix[al.length][bl.length] / len;
 }
 
+function getSearchTerm(name: string): string {
+  // Strip common prefixes
+  const clean = name.replace(/^(dr|md|prof|professor|associate|assoc|mr|mrs|ms|ab\b)\.?\s+/i, '').trim();
+  // Get the first word of the clean name that is at least 3 characters long
+  const words = clean.split(/\s+/).filter(w => w.length >= 3);
+  return words[0] || clean.split(/\s+/)[0] || name;
+}
+
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
@@ -41,48 +49,81 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ matches: [] });
     }
 
-    // Build a broad query to find potential matches
-    const orConditions: any[] = [];
-    if (name) orConditions.push({ name: { $regex: name.split(' ')[0], $options: 'i' } });
-    if (name) orConditions.push({ nameBn: { $regex: name.split(' ')[0], $options: 'i' } });
-    if (specialty) orConditions.push({ specialty: { $regex: specialty.split(' ')[0], $options: 'i' } });
-    if (qualification) orConditions.push({ qualification: { $regex: qualification.split(' ')[0], $options: 'i' } });
-    
-    if (orConditions.length === 0) {
-      return NextResponse.json({ matches: [] });
+    const query: any = {};
+    if (name) {
+      const term = getSearchTerm(name);
+      if (term) {
+        query.$or = [
+          { name: { $regex: term, $options: 'i' } },
+          { nameBn: { $regex: term, $options: 'i' } }
+        ];
+      }
     }
 
-    const query: any = { $or: orConditions };
+    if (!query.$or) {
+      const orConditions: any[] = [];
+      if (specialty) orConditions.push({ specialty: { $regex: specialty.split(' ')[0], $options: 'i' } });
+      if (qualification) orConditions.push({ qualification: { $regex: qualification.split(' ')[0], $options: 'i' } });
+      
+      if (orConditions.length === 0) {
+        return NextResponse.json({ matches: [] });
+      }
+      query.$or = orConditions;
+    }
+
     if (excludeId) {
       query._id = { $ne: excludeId };
     }
 
     const candidates = await Doctor.find(query)
       .select('name nameBn specialty specialtyBn qualification qualificationBn designation designationBn slug _id')
-      .limit(50)
       .lean();
 
     const matches = candidates
       .map((doc: any) => {
-        const fields = [
-          { weight: 0.3, score: Math.max(
-            levenshteinSimilarity(name || '', doc.name || ''),
-            levenshteinSimilarity(name || '', doc.nameBn || '')
-          )},
-          { weight: 0.25, score: Math.max(
-            levenshteinSimilarity(designation || '', doc.designation || ''),
-            levenshteinSimilarity(designation || '', doc.designationBn || '')
-          )},
-          { weight: 0.25, score: Math.max(
-            levenshteinSimilarity(specialty || '', doc.specialty || ''),
-            levenshteinSimilarity(specialty || '', doc.specialtyBn || '')
-          )},
-          { weight: 0.2, score: Math.max(
-            levenshteinSimilarity(qualification || '', doc.qualification || ''),
-            levenshteinSimilarity(qualification || '', doc.qualificationBn || '')
-          )},
-        ];
-        const similarity = fields.reduce((sum, f) => sum + f.weight * f.score, 0);
+        const fields = [];
+        if (name) {
+          fields.push({
+            weight: 0.3,
+            score: Math.max(
+              levenshteinSimilarity(name, doc.name || ''),
+              levenshteinSimilarity(name, doc.nameBn || '')
+            )
+          });
+        }
+        if (designation) {
+          fields.push({
+            weight: 0.25,
+            score: Math.max(
+              levenshteinSimilarity(designation, doc.designation || ''),
+              levenshteinSimilarity(designation, doc.designationBn || '')
+            )
+          });
+        }
+        if (specialty) {
+          fields.push({
+            weight: 0.25,
+            score: Math.max(
+              levenshteinSimilarity(specialty, doc.specialty || ''),
+              levenshteinSimilarity(specialty, doc.specialtyBn || '')
+            )
+          });
+        }
+        if (qualification) {
+          fields.push({
+            weight: 0.2,
+            score: Math.max(
+              levenshteinSimilarity(qualification, doc.qualification || ''),
+              levenshteinSimilarity(qualification, doc.qualificationBn || '')
+            )
+          });
+        }
+
+        const totalWeight = fields.reduce((sum, f) => sum + f.weight, 0);
+        const similarity = totalWeight > 0 
+          ? fields.reduce((sum, f) => sum + f.weight * f.score, 0) / totalWeight
+          : 0;
+
         return {
           _id: doc._id,
           name: doc.name,

@@ -213,16 +213,16 @@ export default function CreateDoctorPage() {
       const spec = watchSpecialty || watchSpecialtyBn;
       const qual = watchQualification || watchQualificationBn;
 
-      if (n && des && spec && qual) {
+      if (n && n.trim().length >= 3) {
         try {
           const res = await fetch("/api/doctors/check-duplicate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: n,
-              designation: des,
-              specialty: spec,
-              qualification: qual
+              designation: des || undefined,
+              specialty: spec || undefined,
+              qualification: qual || undefined
             })
           });
           if (res.ok) {

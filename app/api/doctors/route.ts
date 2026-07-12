@@ -16,11 +16,110 @@ import { normalizeSearchQuery, buildPhoneticRegex } from "@/lib/search-utils";
 //   delete mongoose.models.Doctor; 
 // }
 
+const dpBuffer = new Int32Array(4000);
+
+function getLcsLength(str1: string, str2: string): number {
+  const m = str1.length;
+  const n = str2.length;
+  if (m === 0 || n === 0) return 0;
+  
+  if ((m + 1) * (n + 1) > 4000) {
+    // Fallback to local allocation if word is exceptionally long (unlikely)
+    const dp = Array.from({ length: m + 1 }, () => new Int32Array(n + 1));
+    for (let i = 1; i <= m; i++) {
+      const code1 = str1.charCodeAt(i - 1);
+      for (let j = 1; j <= n; j++) {
+        if (code1 === str2.charCodeAt(j - 1)) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+    return dp[m][n];
+  }
+  
+  const stride = n + 1;
+  
+  // Clear buffer headers
+  for (let j = 0; j <= n; j++) dpBuffer[j] = 0;
+  for (let i = 0; i <= m; i++) dpBuffer[i * stride] = 0;
+  
+  for (let i = 1; i <= m; i++) {
+    const code1 = str1.charCodeAt(i - 1);
+    const rowOffset = i * stride;
+    const prevRowOffset = (i - 1) * stride;
+    
+    for (let j = 1; j <= n; j++) {
+      if (code1 === str2.charCodeAt(j - 1)) {
+        dpBuffer[rowOffset + j] = dpBuffer[prevRowOffset + j - 1] + 1;
+      } else {
+        const val1 = dpBuffer[prevRowOffset + j];
+        const val2 = dpBuffer[rowOffset + j - 1];
+        dpBuffer[rowOffset + j] = val1 > val2 ? val1 : val2;
+      }
+    }
+  }
+  
+  return dpBuffer[m * stride + n];
+}
+
+function calculateMatchScore(queryClean: string, targetText: string, isLongField = false): number {
+  if (!queryClean || !targetText) return 0;
+  
+  const queryWords = queryClean.split(/\s+/).filter(Boolean);
+  if (queryWords.length === 0) return 0;
+  
+  const targetClean = targetText.toLowerCase();
+
+  // Optimization: for long fields, use fast substring contains matching
+  if (isLongField) {
+    let matchedWords = 0;
+    for (const qWord of queryWords) {
+      if (targetClean.includes(qWord)) {
+        matchedWords++;
+      }
+    }
+    return matchedWords / queryWords.length;
+  }
+  
+  const targetWords = targetClean.split(/\s+/).map(w => w.replace(/[\s.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")).filter(Boolean);
+  if (targetWords.length === 0) return 0;
+  
+  let totalScore = 0;
+  
+  for (const qWord of queryWords) {
+    let maxWordScore = 0;
+    for (const tWord of targetWords) {
+      // Fast path: exact match
+      if (qWord === tWord) {
+        maxWordScore = 1.0;
+        continue;
+      }
+      
+      // Fast path: prefix match
+      if (tWord.startsWith(qWord)) {
+        maxWordScore = Math.max(maxWordScore, 0.9);
+        continue;
+      }
+      
+      const lcs = getLcsLength(qWord, tWord);
+      const similarity = lcs / Math.max(qWord.length, tWord.length);
+      if (similarity > maxWordScore) {
+        maxWordScore = similarity;
+      }
+    }
+    totalScore += maxWordScore;
+  }
+  
+  return totalScore / queryWords.length;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const { searchParams } = new URL(request.url);
-    
+
     // Pagination
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -46,59 +145,7 @@ export async function GET(request: NextRequest) {
 
     let query: any = {};
 
-    // Text search across multiple fields using phonetic query logic
-    if (search) {
-      const cleanSearch = normalizeSearchQuery(search);
-      const fullFuzzyRegex = buildPhoneticRegex(cleanSearch);
-      const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
-
-      if (fullFuzzyRegex) {
-        const fullQueryOr = [
-          { name: fullFuzzyRegex },
-          { nameBn: fullFuzzyRegex },
-          { specialty: fullFuzzyRegex },
-          { specialtyBn: fullFuzzyRegex },
-          { qualification: fullFuzzyRegex },
-          { qualificationBn: fullFuzzyRegex },
-          { bio: fullFuzzyRegex },
-          { bioBn: fullFuzzyRegex },
-          { designation: fullFuzzyRegex },
-          { designationBn: fullFuzzyRegex }
-        ];
-
-        if (searchTerms.length > 1) {
-          const termsAnd = searchTerms.map(term => {
-            const termFuzzy = buildPhoneticRegex(term);
-            if (!termFuzzy) return null;
-            return {
-              $or: [
-                { name: termFuzzy },
-                { nameBn: termFuzzy },
-                { specialty: termFuzzy },
-                { specialtyBn: termFuzzy },
-                { qualification: termFuzzy },
-                { qualificationBn: termFuzzy },
-                { bio: termFuzzy },
-                { bioBn: termFuzzy },
-                { designation: termFuzzy },
-                { designationBn: termFuzzy }
-              ]
-            };
-          }).filter((c): c is NonNullable<typeof c> => c !== null);
-
-          if (termsAnd.length > 0) {
-            query.$or = [
-              { $and: termsAnd },
-              { $or: fullQueryOr }
-            ];
-          } else {
-            query.$or = fullQueryOr;
-          }
-        } else {
-          query.$or = fullQueryOr;
-        }
-      }
-    }
+    // Text search handled in-memory below for extremely accurate scoring
 
     // Exact matches
     if (specialty) query.specialty = specialty;
@@ -179,17 +226,73 @@ export async function GET(request: NextRequest) {
       query["availability.days"] = { $in: days };
     }
 
-    const [doctors, total] = await Promise.all([
-      Doctor.find(query)
-        .sort({ [sortBy]: sortDirection })
-        .skip(skip)
-        .limit(limit),
-      Doctor.countDocuments(query)
-    ]);
+    let doctors: any[] = [];
+    let total = 0;
 
+    if (search) {
+      // Fetch all candidate doctors matching non-search filters (e.g. location, specialty, rating)
+      let docQuery = Doctor.find(query);
+      if (searchParams.get("suggestions") === "true") {
+        docQuery = docQuery.select("name nameBn specialty specialtyBn qualification qualificationBn designation designationBn department departmentBn hospital hospitalBn slug slugBn image rating");
+      }
+      const allDocs = await docQuery;
+      const cleanSearch = normalizeSearchQuery(search);
 
-    return NextResponse.json({ 
-      doctors, 
+      const scored = allDocs.map(doctor => {
+        const scoreName = calculateMatchScore(cleanSearch, doctor.name || "");
+        const scoreNameBn = calculateMatchScore(cleanSearch, doctor.nameBn || "");
+        const scoreSpecialty = calculateMatchScore(cleanSearch, doctor.specialty || "");
+        const scoreSpecialtyBn = calculateMatchScore(cleanSearch, doctor.specialtyBn || "");
+        const scoreQual = calculateMatchScore(cleanSearch, doctor.qualification || "", true);
+        const scoreQualBn = calculateMatchScore(cleanSearch, doctor.qualificationBn || "", true);
+        const scoreDesignation = calculateMatchScore(cleanSearch, doctor.designation || "", true);
+        const scoreDesignationBn = calculateMatchScore(cleanSearch, doctor.designationBn || "", true);
+        const scoreDept = calculateMatchScore(cleanSearch, doctor.department || "", true);
+        const scoreDeptBn = calculateMatchScore(cleanSearch, doctor.departmentBn || "", true);
+        const scoreHosp = calculateMatchScore(cleanSearch, doctor.hospital || "", true);
+        const scoreHospBn = calculateMatchScore(cleanSearch, doctor.hospitalBn || "", true);
+
+        const maxScore = Math.max(
+          scoreName,
+          scoreNameBn,
+          scoreSpecialty,
+          scoreSpecialtyBn,
+          scoreQual,
+          scoreQualBn,
+          scoreDesignation,
+          scoreDesignationBn,
+          scoreDept,
+          scoreDeptBn,
+          scoreHosp,
+          scoreHospBn
+        );
+
+        return { doctor, maxScore };
+      });
+
+      // Filter out matches with less than 35% similarity on any field
+      const filtered = scored.filter(item => item.maxScore >= 0.35);
+
+      // Sort by match score descending
+      filtered.sort((a, b) => b.maxScore - a.maxScore);
+
+      total = filtered.length;
+      doctors = filtered.slice(skip, skip + limit).map(item => item.doctor);
+    } else {
+      // Standard query with pagination
+      const [docs, count] = await Promise.all([
+        Doctor.find(query)
+          .sort({ [sortBy]: sortDirection })
+          .skip(skip)
+          .limit(limit),
+        Doctor.countDocuments(query)
+      ]);
+      doctors = docs;
+      total = count;
+    }
+
+    return NextResponse.json({
+      doctors,
       total,
       page,
       limit,
@@ -258,7 +361,7 @@ export async function POST(request: NextRequest) {
 
     // Ensure availability is an array and validate structure
     const availabilityArray = Array.isArray(availability) ? availability : [availability];
-    
+
     // Validate each availability slot
     for (const slot of availabilityArray) {
       if (!slot.days || !Array.isArray(slot.days) || slot.days.length === 0) {

@@ -409,30 +409,41 @@ function DoctorListPageContent() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Suggestions query — instant (no debounce), with AbortController to cancel stale requests
+  // Suggestions query with 150ms debounce to prevent typing lag
   useEffect(() => {
-    if (!searchQuery || searchQuery.trim().length < 1) {
+    const q = searchQuery.trim();
+    if (!q || q.length < 1) {
       setSuggestionDoctors([]);
       setDebouncedSuggestQuery("");
       return;
     }
-    setDebouncedSuggestQuery(searchQuery);
+    setDebouncedSuggestQuery(q);
 
     const controller = new AbortController();
-    const fetchSuggestions = async () => {
-      try {
-        const res = await fetch(
-          `/api/doctors?search=${encodeURIComponent(searchQuery.trim())}&limit=20`,
-          { signal: controller.signal }
-        );
-        const data = await res.json();
-        if (res.ok) setSuggestionDoctors(data.doctors || []);
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name !== "AbortError") console.error(err);
-      }
+    const timer = setTimeout(() => {
+      const fetchSuggestions = async () => {
+        try {
+          const res = await fetch(
+            `/api/doctors?search=${encodeURIComponent(q)}&limit=100&suggestions=true`,
+            { signal: controller.signal }
+          );
+          const data = await res.json();
+          if (res.ok) {
+            setSuggestionDoctors(data.doctors || []);
+          }
+        } catch (err: unknown) {
+          if (err instanceof Error && err.name !== "AbortError") {
+            console.error(err);
+          }
+        }
+      };
+      fetchSuggestions();
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
     };
-    fetchSuggestions();
-    return () => controller.abort();
   }, [searchQuery]);
 
   // Fetch doctors when filters change
@@ -541,28 +552,28 @@ function DoctorListPageContent() {
     if (!queryClean) return [];
 
     // Score each doctor by how closely they match the query
-    const scored = suggestionDoctors.slice(0, 20).map(doctor => {
-      const nameLower      = (doctor.name || '').toLowerCase();
-      const nameBnLower    = (doctor.nameBn || '').toLowerCase();
+    const scored = suggestionDoctors.map(doctor => {
+      const nameLower = (doctor.name || '').toLowerCase();
+      const nameBnLower = (doctor.nameBn || '').toLowerCase();
       const specialtyLower = (doctor.specialty || '').toLowerCase();
-      const desigLower     = (doctor.designation || '').toLowerCase();
-      const qualifLower    = (doctor.qualification || '').toLowerCase();
+      const desigLower = (doctor.designation || '').toLowerCase();
+      const qualifLower = (doctor.qualification || '').toLowerCase();
 
       const cleanField = (str: string | undefined) => (str || '').toLowerCase().replace(/[\s.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
-      const nameClean      = cleanField(doctor.name);
-      const nameBnClean    = cleanField(doctor.nameBn);
+      const nameClean = cleanField(doctor.name);
+      const nameBnClean = cleanField(doctor.nameBn);
       const specialtyClean = cleanField(doctor.specialty);
-      const desigClean     = cleanField(doctor.designation);
-      const qualifClean    = cleanField(doctor.qualification);
+      const desigClean = cleanField(doctor.designation);
+      const qualifClean = cleanField(doctor.qualification);
 
       let score = 0;
-      if (nameLower === query || nameClean === queryClean)                   score += 100; // exact match
-      else if (nameLower.startsWith(query) || nameClean.startsWith(queryClean))      score += 80;  // starts with
-      else if (nameLower.includes(query) || nameClean.includes(queryClean))        score += 60;  // contains
-      if (nameBnLower.includes(query) || nameBnClean.includes(queryClean))           score += 50;  // Bangla name
-      if (specialtyLower.includes(query) || specialtyClean.includes(queryClean))        score += 30;
-      if (desigLower.includes(query) || desigClean.includes(queryClean))            score += 10;
-      if (qualifLower.includes(query) || qualifClean.includes(queryClean))           score += 10;
+      if (nameLower === query || nameClean === queryClean) score += 100; // exact match
+      else if (nameLower.startsWith(query) || nameClean.startsWith(queryClean)) score += 80;  // starts with
+      else if (nameLower.includes(query) || nameClean.includes(queryClean)) score += 60;  // contains
+      if (nameBnLower.includes(query) || nameBnClean.includes(queryClean)) score += 50;  // Bangla name
+      if (specialtyLower.includes(query) || specialtyClean.includes(queryClean)) score += 30;
+      if (desigLower.includes(query) || desigClean.includes(queryClean)) score += 10;
+      if (qualifLower.includes(query) || qualifClean.includes(queryClean)) score += 10;
 
       return { doctor, score };
     });

@@ -11,16 +11,16 @@
  */
 export function normalizeSearchQuery(query: string): string {
   if (!query) return "";
-  
+
   let clean = query.toLowerCase().trim();
-  
+
   // Regex to match prefixes at the start of the query
   // English: dr, md, mohammad, mohammed, mrs, mr, prof, professor (with or without dot)
   // Bangla: ডাঃ, ডা, মোঃ, মো, মোহাম্মদ (followed by space or boundary)
   const prefixRegex = /^(dr\b\.?|md\b\.?|mohammad\b|mohammed\b|mrs\b\.?|mr\b\.?|prof\b\.?|professor\b)\s*|^(ডাঃ|ডা\s+|মোঃ|মো\s+|মোহাম্মদ\s+)/gi;
-  
+
   const removed = clean.replace(prefixRegex, "").trim();
-  
+
   // If removing prefix leaves an empty string, fallback to original clean query
   return removed || clean;
 }
@@ -42,10 +42,10 @@ export function buildPhoneticRegexPattern(query: string): string {
 
   // Split query into words to match each word
   const words = clean.split(/\s+/).filter(Boolean);
-  
+
   const wordPatterns = words.map(word => {
     const lowerWord = word.toLowerCase();
-    
+
     // Explicit word-level substitutions
     if (lowerWord === "ahmed" || lowerWord === "ahamed") {
       return "(ahmed|ahamed)";
@@ -53,7 +53,7 @@ export function buildPhoneticRegexPattern(query: string): string {
     if (lowerWord === "mohammad" || lowerWord === "mohammed" || lowerWord === "md") {
       return "(mohammad|mohammed|md)";
     }
-    
+
     let pattern = "";
     let i = 0;
     while (i < word.length) {

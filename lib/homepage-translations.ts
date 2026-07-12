@@ -36,7 +36,7 @@ export const homepageTranslations = {
 
     },
     search: {
-      placeholder: "Search Doctor, Hospital, Department...",
+      placeholder: "Search Doctors...",
       button: "Search",
       doctorTag: "Doctor",
       specialtyTag: "Specialty",
@@ -658,7 +658,7 @@ export const homepageTranslations = {
 
     },
     search: {
-      placeholder: "ডাক্তার, হাসপাতাল, বিভাগ ...",
+      placeholder: "ডাক্তার খুঁজুন...",
       button: "খুঁজুন",
       doctorTag: "ডাক্তার",
       specialtyTag: "বিশেষতা",

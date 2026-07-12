@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Stethoscope } from "lucide-react";
+import { Search, Stethoscope, Loader2 } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import DoctorCard, { Doctor } from "@/components/doctor-card";
@@ -40,31 +40,56 @@ export default function DepartmentDoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [deptDetails, setDeptDetails] = useState<{ name: string; nameBn?: string } | null>(null);
+
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalDoctors, setTotalDoctors] = useState(0);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   const { language } = useLanguage();
   const t = translations[language];
 
+  // Debounce search query
   useEffect(() => {
-    fetchDoctors();
-    fetchDepartmentDetails();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [departmentName]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const fetchDoctors = async () => {
+  const fetchDoctors = async (pageNum: number, isNewSearch = false) => {
     try {
-      const response = await fetch(`/api/doctors?limit=20000`);
+      if (pageNum > 1) setLoadingMore(true);
+      else if (!isNewSearch) setLoading(true);
+
+      const params = new URLSearchParams();
+      params.append("page", pageNum.toString());
+      params.append("limit", "12");
+      params.append("department", departmentName);
+      if (debouncedSearchQuery) {
+        params.append("search", debouncedSearchQuery);
+      }
+
+      const response = await fetch(`/api/doctors?${params.toString()}`);
       const data = await response.json();
       if (response.ok) {
-        const departmentDoctors = (data.doctors || []).filter(
-          (doctor: Doctor) => doctor.department === departmentName
-        );
-        setDoctors(departmentDoctors);
+        if (isNewSearch || pageNum === 1) {
+          setDoctors(data.doctors || []);
+        } else {
+          setDoctors(prev => [...prev, ...(data.doctors || [])]);
+        }
+        setTotalDoctors(data.total || 0);
+        setHasMore(data.page < data.totalPages);
       }
     } catch (error) {
       console.error("Error fetching doctors:", error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -80,23 +105,50 @@ export default function DepartmentDoctorsPage() {
     }
   };
 
+  // Fetch department details once
+  useEffect(() => {
+    fetchDepartmentDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [departmentName]);
+
+  // Reset and refetch on search query change
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    fetchDoctors(1, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchQuery, departmentName]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchDoctors(nextPage);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loading, loadingMore, page]);
+
   const displayDeptName = deptDetails
     ? getLocalizedValue(deptDetails.name, deptDetails.nameBn, language)
     : departmentName;
 
-  const filteredDoctors = useMemo(() => {
-    if (!searchQuery) return doctors;
-    const query = searchQuery.toLowerCase();
-    return doctors.filter(
-      (doctor) =>
-        doctor.name.toLowerCase().includes(query) ||
-        doctor.specialty?.toLowerCase().includes(query) ||
-        doctor.availability?.some(slot => slot.hospital?.toLowerCase().includes(query)) ||
-        doctor.qualification.toLowerCase().includes(query)
-    );
-  }, [doctors, searchQuery]);
-
-  if (loading) {
+  if (loading && page === 1 && doctors.length === 0) {
     return <PageLoader />;
   }
 
@@ -109,14 +161,12 @@ export default function DepartmentDoctorsPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="relative  h-[300px] md:h-[400px] w-full overflow-hidden"
+        className="relative h-[300px] md:h-[400px] w-full overflow-hidden"
       >
-        {/* <div className="absolute inset-0 bg-gradient-to-r from-primary/60 via-primary/50 to-primary-dark/60 z-10" /> */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage:
-              "url('/hero/dept_profile.png')",
+            backgroundImage: "url('/hero/dept_profile.png')",
           }}
         />
         <div className="relative z-20 h-full flex items-center justify-center px-4">
@@ -169,12 +219,12 @@ export default function DepartmentDoctorsPage() {
           className="mb-6 text-center"
         >
           <p className="text-base text-gray-600">
-            {filteredDoctors.length} {t.doctorsFound}
+            {totalDoctors} {t.doctorsFound}
           </p>
         </motion.div>
 
         {/* Doctors Grid */}
-        {filteredDoctors.length === 0 ? (
+        {doctors.length === 0 && !loading ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -196,18 +246,27 @@ export default function DepartmentDoctorsPage() {
             </div>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2  xl:grid-cols-3 gap-5">
-            {filteredDoctors.map((doctor, index) => (
-              <motion.div
-                key={doctor._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
-                <DoctorCard doctor={doctor} index={index} />
-              </motion.div>
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {doctors.map((doctor, index) => (
+                <motion.div
+                  key={doctor._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <DoctorCard doctor={doctor} index={index} />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Infinite Scroll Observer Target */}
+            <div ref={observerTarget} className="h-20 w-full flex items-center justify-center mt-8">
+              {loadingMore && (
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              )}
+            </div>
+          </>
         )}
       </div>
 
@@ -215,4 +274,3 @@ export default function DepartmentDoctorsPage() {
     </div>
   );
 }
-
