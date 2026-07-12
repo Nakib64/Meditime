@@ -409,29 +409,31 @@ function DoctorListPageContent() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Debounce suggestions query (300ms delay as requested)
+  // Suggestions query — instant (no debounce), with AbortController to cancel stale requests
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSuggestQuery(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Fetch dedicated suggestions (independent of main grid) - trigger if length >= 3
-  useEffect(() => {
-    if (!debouncedSuggestQuery || debouncedSuggestQuery.length < 3) {
+    if (!searchQuery || searchQuery.trim().length < 1) {
       setSuggestionDoctors([]);
+      setDebouncedSuggestQuery("");
       return;
     }
+    setDebouncedSuggestQuery(searchQuery);
+
+    const controller = new AbortController();
     const fetchSuggestions = async () => {
       try {
-        const res = await fetch(`/api/doctors?search=${encodeURIComponent(debouncedSuggestQuery)}&limit=8`);
+        const res = await fetch(
+          `/api/doctors?search=${encodeURIComponent(searchQuery.trim())}&limit=20`,
+          { signal: controller.signal }
+        );
         const data = await res.json();
         if (res.ok) setSuggestionDoctors(data.doctors || []);
-      } catch { }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== "AbortError") console.error(err);
+      }
     };
     fetchSuggestions();
-  }, [debouncedSuggestQuery]);
+    return () => controller.abort();
+  }, [searchQuery]);
 
   // Fetch doctors when filters change
   useEffect(() => {
@@ -568,7 +570,7 @@ function DoctorListPageContent() {
     // Sort descending by score, keep only those with at least some match
     scored.sort((a, b) => b.score - a.score);
 
-    return scored.slice(0, 8).map(({ doctor }) => ({
+    return scored.slice(0, 20).map(({ doctor }) => ({
       type: 'Doctor',
       typeBn: 'ডাক্তার',
       value: language === 'bn' && doctor.nameBn ? doctor.nameBn : doctor.name,
@@ -739,8 +741,9 @@ function DoctorListPageContent() {
                   placeholder={t.searchPlaceholder}
                   value={searchQuery}
                   onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setShowSuggestions(true);
+                    const val = e.target.value;
+                    setSearchQuery(val);
+                    setShowSuggestions(val.trim().length > 0);
                     setFocusedIndex(-1);
                   }}
                   onFocus={() => setShowSuggestions(true)}

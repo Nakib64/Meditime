@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -36,32 +36,29 @@ export default function SearchSection() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Debounce search query for suggestions (150ms)
+  // Instant fetch with AbortController — cancels stale in-flight requests on each keystroke
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Fetch suggestions dynamically when search query changes
-  useEffect(() => {
-    if (!debouncedQuery || debouncedQuery.trim().length < 1) {
+    if (!searchQuery || searchQuery.trim().length < 1) {
       setDoctors([]);
       setHospitals([]);
       return;
     }
 
+    // Abort any previous in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const fetchSuggestions = async () => {
-      const q = debouncedQuery.trim();
+      const q = searchQuery.trim();
       try {
         const [docsRes, hospRes] = await Promise.all([
-          fetch(`/api/doctors?search=${encodeURIComponent(q)}&limit=20`),
-          fetch(`/api/locations/hospitals?search=${encodeURIComponent(q)}&limit=20`)
+          fetch(`/api/doctors?search=${encodeURIComponent(q)}&limit=20`, { signal: controller.signal }),
+          fetch(`/api/locations/hospitals?search=${encodeURIComponent(q)}&limit=20`, { signal: controller.signal })
         ]);
 
         if (docsRes.ok) {
@@ -72,20 +69,26 @@ export default function SearchSection() {
           const hospData = await hospRes.json();
           setHospitals(hospData.hospitals || []);
         }
-      } catch (error) {
-        console.error("Error fetching suggestions:", error);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== "AbortError")
+          console.error("Error fetching suggestions:", err);
       }
     };
 
     fetchSuggestions();
-  }, [debouncedQuery]);
+    return () => controller.abort();
+  }, [searchQuery]);
 
+  // Build suggestions from already-fetched (API-filtered) doctors & hospitals.
+  // All returned results are relevant — we just score + sort them for ranking,
+  // then always show up to 20 regardless of score.
   const suggestions = useMemo(() => {
     if (!searchQuery || searchQuery.length < 1) return [];
     const query = searchQuery.toLowerCase().trim();
 
     interface ScoredSuggestion {
       type: string;
+      typeBn: string;
       value: string;
       doctor?: Doctor;
       hospital?: Hospital;
@@ -94,89 +97,74 @@ export default function SearchSection() {
     }
 
     const results: ScoredSuggestion[] = [];
+    const seenSpecialties = new Set<string>();
 
-    // 1. Doctor Scoring & Matching
+    // 1. Doctors — always include all (API already filtered for relevance)
     doctors.forEach((doctor) => {
-      const name = (doctor.name || "").toLowerCase();
-      const nameBn = (doctor.nameBn || "").toLowerCase();
-      const specialty = (doctor.specialty || "").toLowerCase();
+      const name        = (doctor.name      || "").toLowerCase();
+      const nameBn      = (doctor.nameBn    || "").toLowerCase();
+      const specialty   = (doctor.specialty || "").toLowerCase();
       const specialtyBn = (doctor.specialtyBn || "").toLowerCase();
-      const dept = (doctor.department || "").toLowerCase(); // Note: department field name check
-      const hospital = (doctor.hospital || "").toLowerCase();
+      const dept        = (doctor.department || "").toLowerCase();
+      const hosp        = (doctor.hospital   || "").toLowerCase();
 
-      let maxScore = 0;
+      // Scoring (for ordering only)
+      let score = 1; // baseline — every fetched doctor is included
+      if (name === query || nameBn === query)                         score = 100;
+      else if (name.startsWith(query) || nameBn.startsWith(query))  score = 80;
+      else if (name.includes(query)   || nameBn.includes(query))    score = 60;
+      else if (specialty.includes(query) || specialtyBn.includes(query)) score = 40;
+      else if (dept.includes(query) || hosp.includes(query))        score = 20;
 
-      // Exact matches get highest priority
-      if (name === query || nameBn === query) maxScore = 100;
-      else if (name.startsWith(query) || nameBn.startsWith(query)) maxScore = 80;
-      else if (name.includes(query) || nameBn.includes(query)){
-         maxScore = 80;
-      }
-
-      // Specialty matches
-      if (specialty.includes(query) || specialtyBn.includes(query)) {
-        const specScore = specialty === query ? 50 : 30;
-        if (specScore > maxScore) {
-          // If the specialty is the primary match, we might want to add the specialty category too
-          if (!results.some(r => r.type === "Specialty" && r.value.toLowerCase() === specialty)) {
-            results.push({
-              type: "Specialty",
-              value: language === 'bn' ? (doctor.specialtyBn || "") : (doctor.specialty || ""),
-              link: `/doctor?search=${encodeURIComponent(doctor.specialty || "")}`,
-              score: specScore + 5 // Slightly higher than individual doctor specialty score
-            });
-          }
-        }
-        maxScore = Math.max(maxScore, specScore);
-      }
-
-      // Department/Hospital context matches
-      if (dept.includes(query) || hospital.includes(query)) {
-        maxScore = Math.max(maxScore, 20);
-      }
-
-      if (maxScore > 0) {
-        results.push({
-          type: "Doctor",
-          value: language === 'bn' ? (doctor.nameBn || '') : (doctor.name || ''),
-          doctor,
-          link: `/doctor/${(language === 'bn' ? (doctor.slugBn || doctor.slug) : (doctor.slug || doctor.slugBn)) || doctor._id}`,
-          score: maxScore
-        });
-      }
-    });
-
-    // 2. Hospital Scoring & Matching
-    hospitals.forEach((hospital) => {
-      const name = (hospital.name || "").toLowerCase();
-      const nameBn = (hospital.nameBn || "").toLowerCase();
-
-      let hScore = 0;
-      if (name === query || nameBn === query) hScore = 95; // Slightly below doctor exact match to keep mixture
-      else if (name.startsWith(query) || nameBn.startsWith(query)) hScore = 75;
-      else if (name.includes(query) || nameBn.includes(query)) hScore = 55;
-
-      if (hScore > 0) {
-        // Avoid duplicate hospital suggestions
-        if (!results.some(r => r.type === "Hospital" && r.hospital?._id === hospital._id)) {
+      // Add a deduplicated specialty row when specialty is the primary match
+      if ((specialty.includes(query) || specialtyBn.includes(query)) && score < 60) {
+        const specKey = specialty;
+        if (!seenSpecialties.has(specKey)) {
+          seenSpecialties.add(specKey);
           results.push({
-            type: "Hospital",
-            value: language === 'bn' ? (hospital.nameBn || '') : (hospital.name || ''),
-            hospital,
-            link: `/hospital/${hospital.slug || encodeURIComponent(hospital.name)}`,
-            score: hScore
+            type: "Specialty", typeBn: "বিশেষত্ব",
+            value: language === 'bn' ? (doctor.specialtyBn || doctor.specialty || "") : (doctor.specialty || ""),
+            link: `/doctor?search=${encodeURIComponent(doctor.specialty || "")}`,
+            score: score + 5,
           });
         }
       }
+
+      results.push({
+        type: "Doctor", typeBn: "ডাক্তার",
+        value: language === 'bn' ? (doctor.nameBn || doctor.name || '') : (doctor.name || ''),
+        doctor,
+        link: `/doctor/${(language === 'bn' ? (doctor.slugBn || doctor.slug) : (doctor.slug || doctor.slugBn)) || doctor._id}`,
+        score,
+      });
     });
 
-    // Sort by score (descending) and then type to ensure mixture if scores are same
+    // 2. Hospitals — always include all
+    const seenHospitals = new Set<string>();
+    hospitals.forEach((hospital) => {
+      if (seenHospitals.has(hospital._id)) return;
+      seenHospitals.add(hospital._id);
+
+      const name   = (hospital.name   || "").toLowerCase();
+      const nameBn = (hospital.nameBn || "").toLowerCase();
+
+      let score = 1;
+      if (name === query || nameBn === query)                         score = 95;
+      else if (name.startsWith(query) || nameBn.startsWith(query))  score = 75;
+      else if (name.includes(query)   || nameBn.includes(query))    score = 55;
+
+      results.push({
+        type: "Hospital", typeBn: "হাসপাতাল",
+        value: language === 'bn' ? (hospital.nameBn || hospital.name || '') : (hospital.name || ''),
+        hospital,
+        link: `/hospital/${hospital.slug || encodeURIComponent(hospital.name)}`,
+        score,
+      });
+    });
+
     return results
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return a.type.localeCompare(b.type); // Secondary sort to interleave types
-      })
-      .slice(0, 8);
+      .sort((a, b) => b.score !== a.score ? b.score - a.score : a.type.localeCompare(b.type))
+      .slice(0, 20);
   }, [searchQuery, doctors, hospitals, language]);
 
   const handleSearch = () => {
@@ -216,8 +204,9 @@ export default function SearchSection() {
               placeholder={t.placeholder}
               value={searchQuery}
               onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSuggestions(true);
+                const val = e.target.value;
+                setSearchQuery(val);
+                setShowSuggestions(val.trim().length > 0);
                 setFocusedIndex(-1);
               }}
               onFocus={() => setShowSuggestions(true)}

@@ -9,6 +9,7 @@ import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
 import { homepageTranslations } from "@/lib/homepage-translations";
 
 interface Hospital {
+  slug: any;
   addressBn: string | null | undefined;
   address: string | null | undefined;
   _id: string;
@@ -104,7 +105,7 @@ export default function HospitalPartnersSection() {
               return (
                 <Link
                   key={`${hospital._id}-${idx}`}
-                  href={`/hospital/${hospital._id}`}
+                  href={`/hospital/${hospital.slug}`}
                   className="group relative w-[320px] h-[450px] shrink-0 overflow-hidden rounded-3xl border border-white/10 shadow-2xl"
                 >
                   {/* Hospital Photo Cover with Fallback Logic */}
