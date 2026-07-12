@@ -213,7 +213,19 @@ export default function CreateDoctorPage() {
       const spec = watchSpecialty || watchSpecialtyBn;
       const qual = watchQualification || watchQualificationBn;
 
-      if (n && n.trim().length >= 3) {
+      const fields = [
+        watchName,
+        watchNameBn,
+        watchDesignation,
+        watchDesignationBn,
+        watchSpecialty,
+        watchSpecialtyBn,
+        watchQualification,
+        watchQualificationBn
+      ];
+      const filledCount = fields.filter(f => typeof f === 'string' && f.trim().length > 0).length;
+
+      if (filledCount >= 4) {
         try {
           const res = await fetch("/api/doctors/check-duplicate", {
             method: "POST",

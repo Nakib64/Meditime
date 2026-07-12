@@ -283,16 +283,28 @@ export default function EditDoctorPage() {
       const spec = watchSpecialty || watchSpecialtyBn;
       const qual = watchQualification || watchQualificationBn;
 
-      if (n && des && spec && qual && doctorId) {
+      const fields = [
+        watchName,
+        watchNameBn,
+        watchDesignation,
+        watchDesignationBn,
+        watchSpecialty,
+        watchSpecialtyBn,
+        watchQualification,
+        watchQualificationBn
+      ];
+      const filledCount = fields.filter(f => typeof f === 'string' && f.trim().length > 0).length;
+
+      if (filledCount >= 4 && doctorId) {
         try {
           const res = await fetch("/api/doctors/check-duplicate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: n,
-              designation: des,
-              specialty: spec,
-              qualification: qual,
+              designation: des || undefined,
+              specialty: spec || undefined,
+              qualification: qual || undefined,
               excludeId: doctorId
             })
           });
