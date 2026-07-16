@@ -5,12 +5,11 @@ import mongoose from "mongoose";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
+    const { id } = await params;
 
     let hospital;
     if (mongoose.Types.ObjectId.isValid(id)) {
@@ -56,12 +55,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
+    const { id } = await params;
     const body = await request.json();
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -109,13 +107,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
-    // Handle both Next.js 15 (Promise) and earlier versions
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(

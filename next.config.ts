@@ -38,6 +38,12 @@ const nextConfig: NextConfig = {
         hostname: "plus.unsplash.com",
       },
     ],
+    localPatterns: [
+      {
+        pathname: "/**",
+        search: "?*",
+      },
+    ],
   },
 };
 

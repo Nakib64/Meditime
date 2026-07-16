@@ -6,13 +6,11 @@ import mongoose from "mongoose";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
-    // Handle both Next.js 15 (Promise) and earlier versions
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(

@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Generate unique serial number (used when admin confirms appointment)
-export async function generateSerialNumber(): Promise<string> {
+async function generateSerialNumber(): Promise<string> {
   const today = new Date();
   const year = today.getFullYear().toString().slice(-2);
   const month = String(today.getMonth() + 1).padStart(2, '0');
