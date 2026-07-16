@@ -20,7 +20,7 @@ export default function HeroSection() {
     {
       title: t.slide1.title,
       description: t.slide1.description,
-      image: "/slide/doctor.png",
+      image: "/slide/doctor.png?v=1",
       ctaText: t.slide1.cta,
       ctaLink: "/doctor",
       ctaText2: t.slide1.cta2,
@@ -29,7 +29,7 @@ export default function HeroSection() {
     {
       title: t.slide2.title,
       description: t.slide2.description,
-      image: "/slide/diagnostic.png",
+      image: "/slide/diagnostic.png?v=1",
       ctaText: t.slide2.cta,
       ctaLink: "/diagnostic",
 
@@ -37,14 +37,14 @@ export default function HeroSection() {
     {
       title: t.slide3.title,
       description: t.slide3.description,
-      image: "/slide/membership.png",
+      image: "/slide/membership.png?v=1",
       ctaText: t.slide3.cta,
       ctaLink: "/membership",
     },
     {
       title: t.slide4.title,
       description: t.slide4.description,
-      image: "/slide/app.png",
+      image: "/slide/app.png?v=1",
       ctaText: t.slide4.cta,
       ctaLink: "https://play.google.com/store",
     },
