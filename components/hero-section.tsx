@@ -101,7 +101,7 @@ export default function HeroSection() {
                   alt={slide.title}
                   fill
                   sizes="100vw"
-                  className="object-cover  object-[95%_center] lg:object-center"
+                  className="object-cover  object-[100%_center] lg:object-center"
                   priority={index === 0}
                 />
                 <div className="absolute inset-0 bg-black/45" />

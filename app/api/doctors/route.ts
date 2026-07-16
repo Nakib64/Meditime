@@ -241,30 +241,10 @@ export async function GET(request: NextRequest) {
       const scored = allDocs.map(doctor => {
         const scoreName = calculateMatchScore(cleanSearch, doctor.name || "");
         const scoreNameBn = calculateMatchScore(cleanSearch, doctor.nameBn || "");
-        const scoreSpecialty = calculateMatchScore(cleanSearch, doctor.specialty || "");
-        const scoreSpecialtyBn = calculateMatchScore(cleanSearch, doctor.specialtyBn || "");
-        const scoreQual = calculateMatchScore(cleanSearch, doctor.qualification || "", true);
-        const scoreQualBn = calculateMatchScore(cleanSearch, doctor.qualificationBn || "", true);
-        const scoreDesignation = calculateMatchScore(cleanSearch, doctor.designation || "", true);
-        const scoreDesignationBn = calculateMatchScore(cleanSearch, doctor.designationBn || "", true);
-        const scoreDept = calculateMatchScore(cleanSearch, doctor.department || "", true);
-        const scoreDeptBn = calculateMatchScore(cleanSearch, doctor.departmentBn || "", true);
-        const scoreHosp = calculateMatchScore(cleanSearch, doctor.hospital || "", true);
-        const scoreHospBn = calculateMatchScore(cleanSearch, doctor.hospitalBn || "", true);
 
         const maxScore = Math.max(
           scoreName,
-          scoreNameBn,
-          scoreSpecialty,
-          scoreSpecialtyBn,
-          scoreQual,
-          scoreQualBn,
-          scoreDesignation,
-          scoreDesignationBn,
-          scoreDept,
-          scoreDeptBn,
-          scoreHosp,
-          scoreHospBn
+          scoreNameBn
         );
 
         return { doctor, maxScore };

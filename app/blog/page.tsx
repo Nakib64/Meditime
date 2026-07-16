@@ -84,7 +84,7 @@ export default function HealthTipsPage() {
       {/* Hero Section - 70% of homepage height */}
       <div className="relative px-0">
         <div className=" mx-auto">
-          <div className="h-[650px] rounded-none overflow-hidden">
+          <div className="h-[450px] md:h-[650px] rounded-none overflow-hidden">
             <div className="relative h-full w-full">
               {/* Background Image */}
               <div

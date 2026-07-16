@@ -80,7 +80,7 @@ export default function PopupModal() {
   const currentBtnText = language === 'bn' 
     ? (popupData.buttonTextBn || 'বিস্তারিত জানুন') 
     : (popupData.buttonText || 'Learn More');
-  const currentBtnLink = popupData.buttonLink || '/offers';
+  const currentBtnLink = popupData.buttonLink || '/offer';
 
   return (
     <AnimatePresence>
@@ -127,14 +127,7 @@ export default function PopupModal() {
             {/* Right Column: Content Section */}
             <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-between bg-white overflow-hidden">
               <div className="flex-1 flex flex-col min-h-0">
-                {/* Modern Pill Badge */}
-                <div className="mb-3.5">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs uppercase tracking-wider">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    {language === 'bn' ? 'সর্বশেষ অফার' : 'Latest Update'}
-                  </span>
-                </div>
-
+           
                 {/* Offer Title */}
                 <h2 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight mb-3 tracking-tight">
                   {currentTitle}
@@ -161,7 +154,7 @@ export default function PopupModal() {
                 </Link>
                 <Link href="/signup" onClick={handleClose} className="inline-block w-full sm:w-1/2">
                   <button
-                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-sm font-bold border-2 border-primary/20 text-primary bg-transparent hover:bg-primary/5 hover:border-primary/40 transition-all duration-300"
+                    className="btn-primaryx btn-slidex flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-sm font-bold shadow-md shadow-primary/10 hover:shadow-primary/20 transition-all duration-300"
                   >
                     {language === 'en' ? 'Sign Up' : 'রেজিস্টার'}
                     <ArrowRight className="w-4 h-4" />
