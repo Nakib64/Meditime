@@ -80,7 +80,7 @@ export default function PopupModal() {
   const currentBtnText = language === 'bn' 
     ? (popupData.buttonTextBn || 'বিস্তারিত জানুন') 
     : (popupData.buttonText || 'Learn More');
-  const currentBtnLink = popupData.buttonLink || '/offer';
+  const currentBtnLink = `/offer/${popupData._id}`;
 
   return (
     <AnimatePresence>
