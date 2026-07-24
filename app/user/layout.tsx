@@ -109,7 +109,7 @@ export default function UserLayout({
       {/* Floating Back to Home Button */}
       <Link
         href="/"
-        className="fixed top-4 right-4 sm:top-5 sm:right-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white text-gray-700 hover:text-primary shadow-lg border border-gray-100 hover:bg-gray-50 transition-all duration-200 active:scale-95 group font-bold text-xs sm:text-sm print:hidden"
+        className="fixed md:hidden top-4 right-4 sm:top-5 sm:right-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white text-gray-700 hover:text-primary shadow-lg border border-gray-100 hover:bg-gray-50 transition-all duration-200 active:scale-95 group font-bold text-xs sm:text-sm print:hidden"
         title={language === 'bn' ? 'হোমে ফিরুন' : 'Back to Home'}
       >
         <Home className="h-5 w-5 text-gray-600 group-hover:text-primary transition-colors" />
