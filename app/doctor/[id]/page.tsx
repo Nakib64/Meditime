@@ -117,10 +117,9 @@ export async function generateMetadata(
       description,
 
       alternates: {
-        canonical: `https://meditime.com.bd/doctors/${
-          doctor.slug ||
+        canonical: `https://meditime.com.bd/doctors/${doctor.slug ||
           doctor._id
-        }`,
+          }`,
       },
 
       openGraph: {
@@ -233,14 +232,14 @@ export default async function DoctorProfilePage({
           },
           ...((doctor as any).rating
             ? {
-                "aggregateRating": {
-                  "@type": "AggregateRating",
-                  "ratingValue": (doctor as any).rating,
-                  "reviewCount": "10",
-                  "bestRating": "5",
-                  "worstRating": "1",
-                },
-              }
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": (doctor as any).rating,
+                "reviewCount": "10",
+                "bestRating": "5",
+                "worstRating": "1",
+              },
+            }
             : {}),
           "worksFor": availabilityArray.map((slot) => {
             const hospSlug = slot?.hospital;
@@ -320,4 +319,4 @@ export default async function DoctorProfilePage({
       <DoctorProfileClient />
     </>
   );
-}
+}

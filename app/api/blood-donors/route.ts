@@ -140,13 +140,13 @@ export async function POST(request: NextRequest) {
       thana: thana || undefined,
       photo: photo || undefined,
       availabilityStatus,
-      lastDonationDate: lastDonationDate ? new Date(lastDonationDate) : undefined,
+      lastDonationDate: lastDonationDate || undefined,
       userId: userId || undefined,
-      isApproved: false, // Applications are pending by default
+      isApproved: false, // Applications are pending by default until admin approves
     });
 
     return NextResponse.json(
-      { message: "Blood donor created successfully", bloodDonor },
+      { message: "Application submitted successfully! Admin will review your application.", bloodDonor },
       { status: 201 }
     );
   } catch (error: any) {

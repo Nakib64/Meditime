@@ -177,7 +177,7 @@ export default function HeroSection() {
                     <h1 className="text-[48px] font-bold leading-[1.15] text-white mb-4">
                       {slide.title}
                     </h1>
-                    <section className=" text-sm sm:text-lg leading-relaxed text-white/85 mb-6 max-w-[420px]">
+                    <section className=" text-sm sm:text-lg leading-relaxed text-white mb-6 max-w-[420px]">
                       {slide.description}
                     </section>
                     <div className="flex gap-4">

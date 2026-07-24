@@ -370,7 +370,24 @@ export default function AmbulancePage() {
                       </div>
                       <div className="space-y-2">
                         <Label>{language === 'bn' ? 'ফোন নম্বর' : 'Phone Number'} *</Label>
-                        <Input required value={formData.phoneNumber} onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="+880" />
+                        <div className="relative flex items-center">
+                          <span className="absolute left-3 flex items-center gap-1.5 text-gray-500 text-sm border-r pr-2 h-6 border-gray-300 pointer-events-none select-none">
+                            <img src="https://flagcdn.com/w40/bd.png" alt="BD" className="w-6 h-4 rounded-sm object-cover" />
+                            <span>+88</span>
+                          </span>
+                          <Input
+                            required
+                            type="tel"
+                            maxLength={11}
+                            placeholder="01XXXXXXXXX"
+                            value={formData.phoneNumber}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 11);
+                              setFormData({ ...formData, phoneNumber: val });
+                            }}
+                            className="pl-[5rem] w-full"
+                          />
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label>{language === 'bn' ? 'গাড়ির নম্বর' : 'Vehicle Number'} *</Label>

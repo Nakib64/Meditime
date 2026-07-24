@@ -87,7 +87,7 @@ export default function AppointmentList({
           </Link>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 mb-10">
           {appointments.map((appointment) => (
             <AppointmentCard
               key={appointment._id}

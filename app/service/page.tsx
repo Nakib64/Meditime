@@ -180,7 +180,7 @@ export default function ServicePage() {
               <h1 className="text-2xl md:text-6xl lg:text-[50px] font-bold text-white mb-6 drop-shadow-2xl leading-tight">
                 {t.heroTitle}
               </h1>
-              <p className="text-[16px] md:text-xl text-white/90 max-w-2xl mb-8 font-light">
+              <p className="text-[16px] md:text-xl text-white max-w-2xl mb-8">
                 {t.heroDesc}
               </p>
             </motion.div>

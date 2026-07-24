@@ -427,12 +427,12 @@ export default function DiagnosticPage() {
               <h1 className="text-2xl md:text-6xl lg:text-[50px] font-bold text-white mb-6 drop-shadow-2xl leading-tight">
                 {t.heroTitle}
               </h1>
-              <p className="text-[16px] md:text-xl text-white/90 max-w-2xl mb-8 font-light">
+              <p className="text-[16px] md:text-xl text-white max-w-2xl mb-8">
                 {t.heroSubtitle}
               </p>
 
               <div className="flex justify-center lg:justify-start mb-8">
-                <Button onClick={() => setShowBookingsModal(true)} 
+                <Button onClick={() => setShowBookingsModal(true)}
                   className="gap-2 btn-primary btn-slide">
                   <Activity className="w-5 h-5" />
                   {language === 'en' ? 'My Booking History' : 'আমার বুকিং ইতিহাস'}

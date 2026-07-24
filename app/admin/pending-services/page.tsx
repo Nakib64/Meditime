@@ -7,6 +7,7 @@ import { CheckCircle, XCircle, Loader2, Droplet, Car, Phone, Mail, MapPin, Calen
 import { useLanguage } from "@/contexts/LanguageContext";
 import { t } from "@/lib/translations";
 import { showToast } from "@/lib/toast";
+import { formatAvailabilityStatus, formatLastDonation } from "@/lib/blood-donor-utils";
 
 interface BloodDonor {
   _id: string;
@@ -203,17 +204,23 @@ export default function PendingServicesPage() {
                          </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                      <div className="grid grid-cols-3 gap-4 bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
                          <div className="space-y-1">
                             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t("location", language)}</p>
                             <p className="text-sm font-bold text-gray-700 truncate">
-                               {donor.division}{donor.district ? `, ${donor.district}` : ''}{donor.thana ? `, ${donor.thana}` : ''}
+                               {[donor.thana, donor.district, donor.division].filter(Boolean).join(", ") || 'N/A'}
+                            </p>
+                         </div>
+                         <div className="space-y-1">
+                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t("availabilityStatus", language)}</p>
+                            <p className="text-sm font-bold text-gray-700">
+                               {formatAvailabilityStatus(donor.availabilityStatus, language)}
                             </p>
                          </div>
                          <div className="space-y-1">
                             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t("lastDonationDate", language)}</p>
                             <p className="text-sm font-bold text-gray-700">
-                               {donor.lastDonationDate ? new Date(donor.lastDonationDate).toLocaleDateString() : (language === 'bn' ? 'তথ্য নেই' : 'N/A')}
+                               {formatLastDonation(donor.lastDonationDate, language)}
                             </p>
                          </div>
                       </div>

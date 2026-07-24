@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { message: "Ambulance created successfully", ambulance },
+      { message: "Application submitted successfully! Admin will review your application.", ambulance },
       { status: 201 }
     );
   } catch (error: any) {

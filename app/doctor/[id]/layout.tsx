@@ -102,11 +102,10 @@ export async function generateMetadata(
     description: description.substring(0, 155),
 
     alternates: {
-      canonical: `https://meditime.com.bd/doctor/${
-        doctor.slug ||
+      canonical: `https://meditime.com.bd/doctor/${doctor.slug ||
         doctor.slugBn ||
         doctor._id
-      }`,
+        }`,
     },
 
     openGraph: {

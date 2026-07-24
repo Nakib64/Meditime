@@ -11,7 +11,7 @@ export interface IBloodDonor extends Document {
   thana?: string;
   photo?: string;
   availabilityStatus: string;
-  lastDonationDate?: Date;
+  lastDonationDate?: any;
   isApproved: boolean;
   userId?: string;
   createdAt: Date;
@@ -69,7 +69,7 @@ const BloodDonorSchema: Schema = new Schema(
       default: 'Available',
     },
     lastDonationDate: {
-      type: Date,
+      type: Schema.Types.Mixed,
     },
     isApproved: {
       type: Boolean,
@@ -84,6 +84,10 @@ const BloodDonorSchema: Schema = new Schema(
     timestamps: true,
   }
 );
+
+if (process.env.NODE_ENV !== 'production' && mongoose.models.BloodDonor) {
+  delete (mongoose.models as any).BloodDonor;
+}
 
 const BloodDonor = mongoose.models.BloodDonor || mongoose.model<IBloodDonor>('BloodDonor', BloodDonorSchema);
 

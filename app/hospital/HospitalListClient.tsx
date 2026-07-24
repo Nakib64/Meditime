@@ -467,7 +467,7 @@ export default function HospitalListPage() {
               <h1 className="text-2xl md:text-6xl lg:text-[50px] font-bold text-white mb-6 drop-shadow-2xl leading-tight">
                 {t.heroTitle}
               </h1>
-              <p className="text-[16px] md:text-xl text-white/90 max-w-2xl mb-8 font-light">
+              <p className="text-[16px] md:text-xl text-white max-w-2xl mb-8">
                 {language === 'bn' ? 'সাভারের কাছে বিভিন্ন লোকেশন, ২০+ স্পেশালিটি এবং ৫০+ হাসপাতাল থেকে ডাক্তার খুঁজে নিন।' : 'Find doctors near Savar from different locations, 20+ specialties, and 50+ hospitals.'}
               </p>
             </motion.div>

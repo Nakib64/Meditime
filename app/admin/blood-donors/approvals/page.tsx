@@ -7,6 +7,7 @@ import { Droplet, Phone, MapPin, Loader2, Check, X, ShieldCheck } from "lucide-r
 import { showToast } from "@/lib/toast";
 import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
 import { t } from "@/lib/translations";
+import { formatAvailabilityStatus, formatLastDonation } from "@/lib/blood-donor-utils";
 
 interface BloodDonor {
   _id: string;
@@ -21,6 +22,7 @@ interface BloodDonor {
   thana?: string;
   thanaBn?: string;
   availabilityStatus: string;
+  lastDonationDate?: string;
   isApproved: boolean;
 }
 
@@ -156,7 +158,12 @@ export default function BloodDonorApprovalsPage() {
                       <div className="flex items-center gap-2 text-gray-600">
                         <Check className="h-4 w-4 text-gray-400" />
                         <span className="font-bold">{language === 'bn' ? 'অবস্থা' : 'Status'}:</span>
-                        <span className="font-medium">{donor.availabilityStatus}</span>
+                        <span className="font-medium">{formatAvailabilityStatus(donor.availabilityStatus, language)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Droplet className="h-4 w-4 text-gray-400" />
+                        <span className="font-bold">{language === 'bn' ? 'শেষ রক্তদান' : 'Last Donation'}:</span>
+                        <span className="font-medium">{formatLastDonation(donor.lastDonationDate, language)}</span>
                       </div>
                     </div>
                   </div>

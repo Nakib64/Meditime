@@ -33,13 +33,15 @@ export async function middleware(request: NextRequest) {
   
   const isSensitiveApi = sensitiveApiPaths.some(path => pathname.startsWith(path));
   const isWriteOperation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
+  const isPublicBloodDonorPost = pathname === '/api/blood-donors' && method === 'POST';
+  const isPublicAmbulancePost = pathname === '/api/ambulances' && method === 'POST';
 
   // Allow admin login page and API
   if (isAdminLoginPath || isAdminAuthApi || isAdminSetupApi) {
     return NextResponse.next();
   }
 
-  if (isAdminPath || isAdminApiPath || (isSensitiveApi && isWriteOperation)) {
+  if ((isAdminPath || isAdminApiPath || (isSensitiveApi && isWriteOperation)) && !isPublicBloodDonorPost && !isPublicAmbulancePost) {
     let session = await getAdminSession(request);
     let response = NextResponse.next();
 

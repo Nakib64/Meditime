@@ -9,6 +9,7 @@ import Image from "next/image";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { t } from "@/lib/translations";
 import { showToast } from "@/lib/toast";
+import { formatAvailabilityStatus, formatLastDonation } from "@/lib/blood-donor-utils";
 
 interface BloodDonor {
   _id: string;
@@ -163,12 +164,12 @@ export default function BloodDonorsPage() {
                 <div className="flex items-center justify-between gap-2 text-sm">
                   <span className="text-slate-500 font-medium">{t("availabilityStatus", language)} : </span>
                   <span className={`font-bold ${donor.availabilityStatus === 'Available' ? 'text-green-500' : 'text-orange-500'}`}>
-                    {donor.availabilityStatus === 'Available' ? (language === 'bn' ? 'উপলব্ধ' : 'Available') : (language === 'bn' ? 'অনুপলব্ধ' : donor.availabilityStatus)}
+                    {formatAvailabilityStatus(donor.availabilityStatus, language)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 text-sm">
                   <span className="text-slate-500 font-medium">{language === 'en' ? "Last Donation : " : "শেষ রক্তদান : "}</span>
-                  <span className="font-bold text-slate-700">{donor.lastDonationDate ? new Date(donor.lastDonationDate).toLocaleDateString(language === 'bn' ? 'bn-BD' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric'}) : (language === 'bn' ? 'কখনো নয়' : 'Never')}</span>
+                  <span className="font-bold text-slate-700">{formatLastDonation(donor.lastDonationDate, language)}</span>
                 </div>
                 {(donor.division || donor.district || donor.thana) && (
                   <div className="flex items-center justify-between gap-2 text-sm">

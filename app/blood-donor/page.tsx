@@ -39,6 +39,7 @@ import {
 import { homepageTranslations } from "@/lib/homepage-translations";
 import { PiDropDuotone, PiCheckCircleDuotone, PiShieldCheckDuotone, PiClockDuotone } from "react-icons/pi";
 import toast from "react-hot-toast";
+import { formatAvailabilityStatus, formatLastDonation } from "@/lib/blood-donor-utils";
 
 const bloodGroups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 
@@ -101,6 +102,7 @@ export default function BloodDonorPage() {
     district: "",
     thana: "",
     availabilityStatus: "Available",
+    lastDonationDate: "Never",
   });
 
   const fetchDivisions = useCallback(async () => {
@@ -225,8 +227,9 @@ export default function BloodDonorPage() {
         body: JSON.stringify(formData),
       });
       if (response.ok) {
-        toast.success(language === 'bn' ? "আবেদন সফলভাবে পাঠানো হয়েছে!" : "Application submitted successfully!");
-        setIsModalOpen(false);
+        toast.success(language === 'bn' ? "আবেদন সফলভাবে জমা হয়েছে!" : "Application submitted successfully!");
+        setIsModalOpen(false);  
+        
         setFormData({
           name: "",
           nameBn: "",
@@ -236,6 +239,7 @@ export default function BloodDonorPage() {
           district: "",
           thana: "",
           availabilityStatus: "Available",
+          lastDonationDate: "Never",
         });
       } else {
         const data = await response.json();
@@ -312,9 +316,9 @@ export default function BloodDonorPage() {
             <h1 className="text-2xl md:text-5xl lg:text-[50px] font-bold text-white mb-6 drop-shadow-2xl leading-tight">
               {language === 'en' ? "Be a Hero in Someone's Story" : "কারো জীবনের গল্পে নায়ক হয়ে উঠুন"}
             </h1>
-            <section className="text-[16px] text-white/95 mb-10 drop-shadow-lg max-w-3xl  leading-relaxed">
+            <p className="text-[16px] md:text-xl text-white max-w-2xl mb-8">
               {t.subtitle[language]}
-            </section>
+            </p>
 
             <Button
               onClick={scrollToJoin}
@@ -527,16 +531,12 @@ export default function BloodDonorPage() {
                             <div className="flex items-center justify-between gap-2 text-sm">
                               <span className="text-slate-500 font-medium">{t.card.status[language]} : </span>
                               <span className={`font-bold ${donor.availabilityStatus === 'Available' ? 'text-green-500' : 'text-orange-500'}`}>
-                                {donor.availabilityStatus === 'Available'
-                                  ? (language === 'bn' ? 'উপলব্ধ' : 'Available')
-                                  : donor.availabilityStatus === 'Recently Donated'
-                                    ? (language === 'bn' ? 'সম্প্রতি রক্ত দিয়েছেন' : 'Recently Donated')
-                                    : (language === 'bn' ? 'অনুপলব্ধ' : 'Unavailable')}
+                                {formatAvailabilityStatus(donor.availabilityStatus, language)}
                               </span>
                             </div>
                             <div className="flex items-center justify-between gap-2 text-sm">
                               <span className="text-slate-500 font-medium">{language === 'en' ? "Last Donation : " : "শেষ রক্তদান : "}</span>
-                              <span className="font-bold text-slate-700">{donor.lastDonationDate ? new Date(donor.lastDonationDate).toLocaleDateString() : (language === 'bn' ? 'কখনো নয়' : 'Never')}</span>
+                              <span className="font-bold text-slate-700">{formatLastDonation(donor.lastDonationDate, language)}</span>
                             </div>
                             <div className="flex items-center justify-between gap-2 text-sm">
                               <span className="text-slate-500 font-medium">{language === 'en' ? "Address : " : "ঠিকানা : "}</span>
@@ -626,7 +626,27 @@ export default function BloodDonorPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2"><Label>{language === 'bn' ? 'পূর্ণ নাম (English)' : 'Full Name (English)'} *</Label><Input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" /></div>
                           <div className="space-y-2"><Label>{language === 'bn' ? 'পূর্ণ নাম (বাংলা)' : 'Full Name (বাংলা)'}</Label><Input value={formData.nameBn} onChange={e => setFormData({ ...formData, nameBn: e.target.value })} placeholder="জন ডো" /></div>
-                          <div className="space-y-2"><Label>{language === 'bn' ? 'ফোন নম্বর' : 'Phone Number'} *</Label><Input required value={formData.phoneNumber} onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="+880" /></div>
+                          <div className="space-y-2">
+                            <Label>{language === 'bn' ? 'ফোন নম্বর' : 'Phone Number'} *</Label>
+                            <div className="relative flex items-center">
+                              <span className="absolute left-3 flex items-center gap-1.5 text-gray-500 text-sm border-r pr-2 h-6 border-gray-300 pointer-events-none select-none">
+                                <img src="https://flagcdn.com/w40/bd.png" alt="BD" className="w-6 h-4 rounded-sm object-cover" />
+                                <span>+88</span>
+                              </span>
+                              <Input
+                                required
+                                type="tel"
+                                maxLength={11}
+                                placeholder="01XXXXXXXXX"
+                                value={formData.phoneNumber}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, '').slice(0, 11);
+                                  setFormData({ ...formData, phoneNumber: val });
+                                }}
+                                className="pl-[5rem] w-full"
+                              />
+                            </div>
+                          </div>
                           <div className="space-y-2">
                             <Label>{language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group'} *</Label>
                             <select required value={formData.bloodGroup} onChange={e => setFormData({ ...formData, bloodGroup: e.target.value })} className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white">{bloodGroups.map(g => <option key={g} value={g}>{g}</option>)}</select>
@@ -657,7 +677,15 @@ export default function BloodDonorPage() {
                             <select required value={formData.availabilityStatus} onChange={e => setFormData({ ...formData, availabilityStatus: e.target.value })} className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white">
                               <option value="Available">{language === 'bn' ? 'উপলব্ধ' : 'Available'}</option>
                               <option value="Unavailable">{language === 'bn' ? 'অনুপলব্ধ' : 'Unavailable'}</option>
-                              <option value="Recently Donated">{language === 'bn' ? 'সম্প্রতি রক্ত দিয়েছেন' : 'Recently Donated'}</option>
+                              <option value="Recently Donated">{language === 'bn' ? 'সম্প্রতি দিয়েছেন' : 'Recently Donated'}</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{language === 'bn' ? 'শেষ রক্তদান' : 'Last Donation'} *</Label>
+                            <select required value={formData.lastDonationDate} onChange={e => setFormData({ ...formData, lastDonationDate: e.target.value })} className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white">
+                              <option value="Never">{language === 'bn' ? 'কখনো নয়' : 'Never'}</option>
+                              <option value="Within 3 months">{language === 'bn' ? '৩ মাসের মধ্যে' : 'Within 3 months'}</option>
+                              <option value="Over 3 months ago">{language === 'bn' ? '৩ মাসের বেশি আগে' : 'Over 3 months ago'}</option>
                             </select>
                           </div>
                         </div>

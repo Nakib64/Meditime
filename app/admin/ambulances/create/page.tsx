@@ -195,11 +195,24 @@ export default function CreateAmbulancePage() {
 
             <div className="space-y-2">
               <Label htmlFor="phoneNumber">{t("phone", language)} *</Label>
-              <Input
-                id="phoneNumber"
-                {...register("phoneNumber")}
-                placeholder="+880123456789"
-              />
+              <div className="relative flex items-center">
+                <span className="absolute left-3 flex items-center gap-1.5 text-gray-500 text-sm border-r pr-2 h-6 border-gray-300 pointer-events-none select-none">
+                  <img src="https://flagcdn.com/w40/bd.png" alt="BD" className="w-6 h-4 rounded-sm object-cover" />
+                  <span>+88</span>
+                </span>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  maxLength={11}
+                  placeholder="01XXXXXXXXX"
+                  {...register("phoneNumber", {
+                    onChange: (e) => {
+                      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                    }
+                  })}
+                  className="pl-[5rem] w-full"
+                />
+              </div>
               {errors.phoneNumber && <p className="text-sm text-red-500">{errors.phoneNumber.message}</p>}
             </div>
 

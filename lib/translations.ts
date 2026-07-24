@@ -325,7 +325,7 @@ export const translations = {
     bloodDonorsSubTitle: "রক্তদাতার প্রোফাইল এবং দাতার তথ্য পরিচালনা করুন",
     noBloodDonors: "কোনো রক্তদাতা পাওয়া যায়নি",
     createFirstBloodDonor: "প্রথম রক্তদাতার প্রোফাইল তৈরি করুন",
-    recentlyDonated: "সম্প্রতি রক্ত দান করেছেন",
+    recentlyDonated: "সম্প্রতি দিয়েছেন",
     
     // Hospital Specific
     addHospital: "হাসপাতালের তথ্য যোগ করুন",

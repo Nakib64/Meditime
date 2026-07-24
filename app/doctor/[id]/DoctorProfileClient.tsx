@@ -531,20 +531,22 @@ const displayedBio = needsTruncation && !bioExpanded
                         }`}
                     >
                       {hospitalSlug !== 'unknown' && (
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-2.5">
-                            <MapPin className={`h-5 w-5 shrink-0 transition-colors ${isSelected ? 'text-primary' : 'text-gray-400 group-hover:text-primary/70'}`} />
-                            <div className="flex flex-col gap-1">
-                              <h1 className={`md:text-lg font-extrabold transition-colors ${isSelected ? 'text-primary' : 'text-gray-800'}`}>
-                                {language === 'bn' ? hospitalBnName : hospitalName}
-                              </h1>
-                              <p className={`md:text-sm font-medium transition-colors ${isSelected ? 'text-primary/80' : 'text-gray-500'}`}>
-                                {language === 'bn' ? hospitalBnAddress : hospitalAddress}
-                              </p>
-                            </div>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1 flex-1">
+                            <h1 className={`md:text-lg font-extrabold transition-colors ${isSelected ? 'text-primary' : 'text-gray-800'}`}>
+                              {language === 'bn' ? hospitalBnName : hospitalName}
+                            </h1>
+                            {(hospitalAddress || hospitalBnAddress) && (
+                              <div className="flex items-center gap-2 pl-2.5">
+                                <MapPin className={`h-4 w-4 shrink-0 transition-colors ${isSelected ? 'text-primary' : 'text-gray-400 group-hover:text-primary/70'}`} />
+                                <p className={`md:text-sm font-medium transition-colors ${isSelected ? 'text-primary/80' : 'text-gray-500'}`}>
+                                  {language === 'bn' ? hospitalBnAddress : hospitalAddress}
+                                </p>
+                              </div>
+                            )}
                           </div>
                           {/* Custom Radio Button */}
-                          <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? 'border-primary bg-primary/10 scale-110' : 'border-gray-300 bg-white'
+                          <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all mt-0.5 ${isSelected ? 'border-primary bg-primary/10 scale-110' : 'border-gray-300 bg-white'
                             }`}>
                             {isSelected && (
                               <div className="h-2.5 w-2.5 rounded-full bg-primary" />
@@ -552,11 +554,11 @@ const displayedBio = needsTruncation && !bioExpanded
                           </div>
                         </div>
                       )}
-                      <div className="space-y-2 pl-7">
+                      <div className="space-y-2">
                         {group.slots.map((slot: any, sIdx: number) => (
-                          <div key={sIdx} className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${isSelected ? 'bg-primary/5' : 'bg-gray-50'
+                          <div key={sIdx} className={`flex items-center gap-2 p-2.5 rounded-xl transition-colors ${isSelected ? 'bg-primary/5' : 'bg-gray-50'
                             }`}>
-                            <Clock className={`h-4 w-4 shrink-0 mt-0.5 ${isSelected ? 'text-primary' : 'text-gray-400'}`} />
+                            <Clock className={`h-4 w-4 shrink-0 ${isSelected ? 'text-primary' : 'text-gray-400'}`} />
                             <span className={`text-sm font-bold ${isSelected ? 'text-primary-dark' : 'text-gray-600'}`}>
                               {formatSlot(slot)}
                             </span>
