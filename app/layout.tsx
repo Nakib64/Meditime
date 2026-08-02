@@ -21,7 +21,13 @@ export const metadata: Metadata = {
   title: "Book Doctors, Tests & Hospital Appointments Online | Meditime",
   description: "Book appointments with top doctors, diagnostic tests, and hospitals near you. Fast, easy, and trusted healthcare booking platform in Bangladesh.",
   icons: {
-    icon: "/SVG/asset-8.svg",
+    icon: [
+      { url: "/SVG/asset-8.svg", type: "image/svg+xml" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/SVG/asset-8.svg",
+    apple: "/apple-touch-icon.png",
   },
 };
 
