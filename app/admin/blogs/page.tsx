@@ -183,6 +183,17 @@ export default function BlogsPage() {
     setImagePreview("");
   };
 
+  const stripHtml = (html: string) =>
+    html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+
+  const isFormValid = Boolean(
+    formData.title.trim() &&
+      formData.titleBn.trim() &&
+      stripHtml(formData.description) &&
+      stripHtml(formData.descriptionBn) &&
+      formData.imageUrl.trim()
+  );
+
   if (loading && blogs.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -303,7 +314,7 @@ export default function BlogsPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading} className="flex-1 bg-primary">
+              <Button type="submit" disabled={loading || uploading || !isFormValid} className="flex-1 bg-primary">
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {editingId ? "Update Blog" : "Create Blog"}
               </Button>

@@ -48,7 +48,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
         value={value}
         config={config}
         onBlur={newContent => onChange(newContent)}
-        onChange={newContent => {}}
+        onChange={newContent => onChange(newContent)}
       />
     </div>
   );
