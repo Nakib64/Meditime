@@ -19,6 +19,7 @@ interface Blog {
   description: string;
   descriptionBn: string;
   imageUrl: string;
+  slug?: string;
   createdAt: string;
 }
 
@@ -105,7 +106,7 @@ export default function BlogSection() {
           >
             {posts.map((post) => (
               <SwiperSlide key={post._id}>
-                <Link href={`/blog/${post._id}`} className="group block">
+                <Link href={`/blog/${post.slug || post._id}`} className="group block">
                   {/* Image */}
                   <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden mb-4">
                     <Image

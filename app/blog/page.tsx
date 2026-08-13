@@ -20,6 +20,7 @@ interface Blog {
   description: string;
   descriptionBn: string;
   imageUrl: string;
+  slug?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -127,7 +128,7 @@ export default function HealthTipsPage() {
             {/* Featured Post - New York Style Large Hero */}
             {featuredPost && posts.length > 0 && (
               <div className="mb-16">
-                <Link href={`/blog/${featuredPost._id}`}>
+                <Link href={`/blog/${featuredPost.slug || featuredPost._id}`}>
                   <Card className="overflow-hidden hover:shadow-2xl transition-shadow duration-300 cursor-pointer group border-0 shadow-lg">
                     <div className="grid md:grid-cols-2 gap-0">
                       <div className="relative h-96 md:h-auto min-h-[400px] bg-gray-100">
@@ -182,7 +183,7 @@ export default function HealthTipsPage() {
                   if (isLarge) {
                     return (
                       <div key={post._id} className="md:col-span-2 lg:col-span-2">
-                        <Link href={`/blog/${post._id}`}>
+                        <Link href={`/blog/${post.slug || post._id}`}>
                           <Card className="overflow-hidden h-full hover:shadow-xl transition-shadow duration-300 cursor-pointer group border-0 shadow-lg">
                             <div className="grid md:grid-cols-2 gap-0 h-full">
                               <div className="relative h-64 md:h-full min-h-[300px] bg-gray-100">
@@ -220,7 +221,7 @@ export default function HealthTipsPage() {
 
                   return (
                     <div key={post._id}>
-                      <Link href={`/blog/${post._id}`}>
+                      <Link href={`/blog/${post.slug || post._id}`}>
                         <Card className="overflow-hidden h-full hover:shadow-xl transition-shadow duration-300 cursor-pointer group flex flex-col border-0 shadow-md">
                           <div className="relative h-64 w-full bg-gray-100">
                             <Image

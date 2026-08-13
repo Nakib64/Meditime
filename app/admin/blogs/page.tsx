@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X, Edit, Trash2, Loader2 } from "lucide-react";
+import { Plus, X, Edit, Trash2, Loader2, Globe, FileText, Search } from "lucide-react";
 import { showToast } from "@/lib/toast";
+import { slugify } from "@/lib/utils";
 import dynamic from "next/dynamic";
 
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
@@ -21,6 +22,9 @@ interface Blog {
   description: string;
   descriptionBn: string;
   imageUrl: string;
+  slug?: string;
+  metaTitle?: string;
+  metaDescription?: string;
   isActive: boolean;
 }
 
@@ -31,14 +35,21 @@ export default function BlogsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
+
   const [formData, setFormData] = useState({
     title: "",
     titleBn: "",
     description: "",
     descriptionBn: "",
     imageUrl: "",
+    slug: "",
+    metaTitle: "",
+    metaDescription: "",
     isActive: true,
   });
+
+  const [isSlugManual, setIsSlugManual] = useState(false);
+  const [isMetaTitleManual, setIsMetaTitleManual] = useState(false);
 
   useEffect(() => {
     fetchBlogs();
@@ -58,6 +69,15 @@ export default function BlogsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTitleChange = (newTitle: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      title: newTitle,
+      slug: isSlugManual ? prev.slug : slugify(newTitle),
+      metaTitle: isMetaTitleManual ? prev.metaTitle : newTitle,
+    }));
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,7 +103,7 @@ export default function BlogsPage() {
 
       if (response.ok && data.url) {
         const imageUrl = data.url;
-        setFormData({ ...formData, imageUrl });
+        setFormData((prev) => ({ ...prev, imageUrl }));
         setImagePreview(imageUrl);
         showToast.success("Image uploaded successfully");
       } else {
@@ -107,10 +127,15 @@ export default function BlogsPage() {
         : "/api/admin/blogs";
       const method = editingId ? "PUT" : "POST";
 
+      const payload = {
+        ...formData,
+        slug: slugify(formData.slug || formData.title),
+      };
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -133,13 +158,18 @@ export default function BlogsPage() {
   const handleEdit = (blog: Blog) => {
     setEditingId(blog._id);
     setFormData({
-      title: blog.title,
+      title: blog.title || "",
       titleBn: blog.titleBn || "",
       description: blog.description || "",
       descriptionBn: blog.descriptionBn || "",
       imageUrl: blog.imageUrl || "",
+      slug: blog.slug || slugify(blog.title || ""),
+      metaTitle: blog.metaTitle || blog.title || "",
+      metaDescription: blog.metaDescription || "",
       isActive: blog.isActive ?? true,
     });
+    setIsSlugManual(Boolean(blog.slug));
+    setIsMetaTitleManual(Boolean(blog.metaTitle));
     setImagePreview(blog.imageUrl || "");
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -178,13 +208,18 @@ export default function BlogsPage() {
       description: "",
       descriptionBn: "",
       imageUrl: "",
+      slug: "",
+      metaTitle: "",
+      metaDescription: "",
       isActive: true,
     });
+    setIsSlugManual(false);
+    setIsMetaTitleManual(false);
     setImagePreview("");
   };
 
   const stripHtml = (html: string) =>
-    html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+    (html || "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
 
   const isFormValid = Boolean(
     formData.title.trim() &&
@@ -208,7 +243,7 @@ export default function BlogsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Blogs / Health Tips</h1>
-          <p className="text-gray-600 mt-1">Create and manage blogs and health tips</p>
+          <p className="text-gray-600 mt-1">Create and manage blogs and health tips with SEO controls</p>
         </div>
         <Button
           onClick={() => {
@@ -223,11 +258,14 @@ export default function BlogsPage() {
       </div>
 
       {showForm && (
-        <Card className="p-6 bg-white border-2 border-primary/10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-800">
-              {editingId ? "Edit Blog" : "Create Blog"}
-            </h2>
+        <Card className="p-6 bg-white border-2 border-primary/10 shadow-lg">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">
+                {editingId ? "Edit Blog Post" : "Create New Blog Post"}
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">Fill in the content and SEO details below</p>
+            </div>
             <Button variant="ghost" size="sm" onClick={resetForm}>
               <X className="h-5 w-5" />
             </Button>
@@ -235,27 +273,107 @@ export default function BlogsPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* English Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">Title (English) <span className="text-red-500">*</span></Label>
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Blog Title"
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  placeholder="e.g. 10 Daily Habits for a Healthy Heart"
                   required
                 />
               </div>
+
+              {/* Bangla Title */}
               <div className="space-y-2">
                 <Label htmlFor="titleBn">Title (Bangla) <span className="text-red-500">*</span></Label>
                 <Input
                   id="titleBn"
                   value={formData.titleBn}
                   onChange={(e) => setFormData({ ...formData, titleBn: e.target.value })}
-                  placeholder="ব্লগের শিরোনাম"
+                  placeholder="যেমন: সুস্থ হৃদযন্ত্রের জন্য ১০টি দৈনন্দিন অভ্যাস"
                   required
                 />
               </div>
 
+              {/* URL Slug Field */}
+              <div className="space-y-2 md:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="slug" className="font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-primary" />
+                    URL Slug (Editable)
+                  </Label>
+                  <span className="text-xs text-gray-500">
+                    {isSlugManual ? "Customized" : "Autofilled from title"}
+                  </span>
+                </div>
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => {
+                    setIsSlugManual(true);
+                    setFormData({ ...formData, slug: e.target.value });
+                  }}
+                  placeholder="e.g. 10-daily-habits-for-a-healthy-heart"
+                  className="bg-white font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  Preview URL: <span className="text-primary font-medium">https://meditime.com.bd/blog/{slugify(formData.slug || formData.title || "your-blog-slug")}</span>
+                </p>
+              </div>
+
+              {/* SEO Meta Title */}
+              <div className="space-y-2 md:col-span-2 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="metaTitle" className="font-semibold text-emerald-900 flex items-center gap-1.5">
+                    <Search className="w-4 h-4 text-emerald-600" />
+                    Meta Title (SEO)
+                  </Label>
+                  <span className="text-xs text-slate-500">
+                    {formData.metaTitle.length}/60 chars
+                  </span>
+                </div>
+                <Input
+                  id="metaTitle"
+                  value={formData.metaTitle}
+                  onChange={(e) => {
+                    setIsMetaTitleManual(true);
+                    setFormData({ ...formData, metaTitle: e.target.value });
+                  }}
+                  placeholder="Strategic SEO title for search engines (defaults to English title if blank)"
+                  className="bg-white"
+                />
+                <p className="text-xs text-slate-500">
+                  This title appears as the main clickable blue link in Google search results.
+                </p>
+
+                {/* SEO Meta Description */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="metaDescription" className="font-semibold text-emerald-900 flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-emerald-600" />
+                      Meta Description (SEO & Keywords)
+                    </Label>
+                    <span className="text-xs text-slate-500">
+                      {formData.metaDescription.length}/160 chars
+                    </span>
+                  </div>
+                  <textarea
+                    id="metaDescription"
+                    rows={3}
+                    value={formData.metaDescription}
+                    onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
+                    placeholder="Write a concise description targeting high-value keywords to improve click-through rate on Google..."
+                    className="w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Target target keywords strategically here for maximum search ranking & engagement.
+                  </p>
+                </div>
+              </div>
+
+              {/* Description (English) */}
               <div className="space-y-2 md:col-span-2">
                 <Label>Description (English) <span className="text-red-500">*</span></Label>
                 <div className="border rounded-lg overflow-hidden min-h-[200px]">
@@ -266,6 +384,7 @@ export default function BlogsPage() {
                 </div>
               </div>
 
+              {/* Description (Bangla) */}
               <div className="space-y-2 md:col-span-2">
                 <Label>Description (Bangla) <span className="text-red-500">*</span></Label>
                 <div className="border rounded-lg overflow-hidden min-h-[200px]">
@@ -276,7 +395,8 @@ export default function BlogsPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              {/* Cover Photo Upload */}
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="image">Blog Cover Photo <span className="text-red-500">*</span></Label>
                 <Input
                   id="image"
@@ -302,7 +422,7 @@ export default function BlogsPage() {
                       type="button"
                       onClick={() => {
                         setImagePreview("");
-                        setFormData({ ...formData, imageUrl: "" });
+                        setFormData((prev) => ({ ...prev, imageUrl: "" }));
                       }}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
                     >
@@ -313,7 +433,7 @@ export default function BlogsPage() {
               </div>
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 pt-4 border-t border-gray-100">
               <Button type="submit" disabled={loading || uploading || !isFormValid} className="flex-1 bg-primary">
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {editingId ? "Update Blog" : "Create Blog"}
@@ -347,6 +467,10 @@ export default function BlogsPage() {
               </div>
               <div className="p-4 flex-1">
                 <h3 className="font-bold text-lg mb-1 line-clamp-1">{blog.title}</h3>
+                <p className="text-xs text-primary font-mono mb-2 flex items-center gap-1 line-clamp-1">
+                  <Globe className="w-3 h-3" />
+                  /blog/{blog.slug || blog._id}
+                </p>
                 <p className="text-gray-500 text-sm line-clamp-2" dangerouslySetInnerHTML={{ __html: blog.description }}></p>
               </div>
               <div className="flex gap-2 p-3 bg-gray-50 border-t mt-auto">

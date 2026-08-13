@@ -6,6 +6,9 @@ export interface IBlog extends Document {
   description: string;
   descriptionBn: string;
   imageUrl: string;
+  slug?: string;
+  metaTitle?: string;
+  metaDescription?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -18,6 +21,9 @@ const BlogSchema: Schema = new Schema(
     description: { type: String, required: true },
     descriptionBn: { type: String, required: true },
     imageUrl: { type: String, required: true },
+    slug: { type: String, unique: true, sparse: true, index: true },
+    metaTitle: { type: String, default: "" },
+    metaDescription: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

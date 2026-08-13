@@ -23,6 +23,7 @@ interface Blog {
   description: string;
   descriptionBn: string;
   imageUrl: string;
+  slug?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -92,41 +93,42 @@ export default function HealthTipsPage() {
           ) : blogs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
               {blogs.map((blog, i) => (
-                <motion.article
-                  key={blog._id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: i * 0.1 }}
-                  className="group relative flex flex-col h-full rounded-[2.5rem] bg-white border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-500"
-                >
-                  <div className="relative aspect-[16/10] overflow-hidden">
-                    {blog.imageUrl ? (
-                      <Image
-                        src={blog.imageUrl}
-                        alt={language === 'en' ? blog.title : blog.titleBn}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-slate-100" />
-                    )}
-                  </div>
-
-                  <div className="p-8 flex flex-col flex-1">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mb-3">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(blog.createdAt).toLocaleDateString()}
+                <Link href={`/blog/${blog.slug || blog._id}`} key={blog._id} className="block group">
+                  <motion.article
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: i * 0.1 }}
+                    className="relative flex flex-col h-full rounded-[2.5rem] bg-white border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-500 cursor-pointer"
+                  >
+                    <div className="relative aspect-[16/10] overflow-hidden">
+                      {blog.imageUrl ? (
+                        <Image
+                          src={blog.imageUrl}
+                          alt={language === 'en' ? blog.title : blog.titleBn}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-slate-100" />
+                      )}
                     </div>
-                    
-                    <h3 className="text-xl font-black text-slate-900 mb-4 leading-tight group-hover:text-[#00B7B5] transition-colors">
-                      {language === 'en' ? blog.title : (blog.titleBn || blog.title)}
-                    </h3>
-                    <div className="text-slate-500 leading-relaxed text-sm mb-8 flex-1 prose line-clamp-3"
-                      dangerouslySetInnerHTML={{ __html: language === 'en' ? blog.description : (blog.descriptionBn || blog.description) }}
-                    />
-                  </div>
-                </motion.article>
+
+                    <div className="p-8 flex flex-col flex-1">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mb-3">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(blog.createdAt).toLocaleDateString()}
+                      </div>
+                      
+                      <h3 className="text-xl font-black text-slate-900 mb-4 leading-tight group-hover:text-[#00B7B5] transition-colors">
+                        {language === 'en' ? blog.title : (blog.titleBn || blog.title)}
+                      </h3>
+                      <div className="text-slate-500 leading-relaxed text-sm mb-8 flex-1 prose line-clamp-3"
+                        dangerouslySetInnerHTML={{ __html: language === 'en' ? blog.description : (blog.descriptionBn || blog.description) }}
+                      />
+                    </div>
+                  </motion.article>
+                </Link>
               ))}
             </div>
           ) : (

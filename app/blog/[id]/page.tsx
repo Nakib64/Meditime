@@ -20,6 +20,7 @@ interface Blog {
   description: string;
   descriptionBn: string;
   imageUrl: string;
+  slug?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -207,7 +208,7 @@ export default function BlogPostPage() {
               {recentPosts.length > 0 ? (
                 recentPosts.map((recentPost) => (
                   <Card key={recentPost._id} className="overflow-hidden border-0 shadow-lg">
-                    <Link href={`/blog/${recentPost._id}`}>
+                    <Link href={`/blog/${recentPost.slug || recentPost._id}`}>
                       <div className="relative h-48 w-full bg-gray-200 group cursor-pointer">
                         <Image
                           src={getFeaturedImage(recentPost)}
