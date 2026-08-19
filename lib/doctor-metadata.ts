@@ -119,15 +119,7 @@ export async function generateDoctorMetadata(
         ? selectedAreaBn || (selectedHospitalDoc?.thana?.nameBn || selectedHospitalDoc?.thana?.district?.nameBn || doctor.districtBn || "সাভার")
         : selectedAreaEn || (selectedHospitalDoc?.thana?.name || selectedHospitalDoc?.thana?.district?.name || doctor.district || "Savar");
 
-    // Format Hospital Name
-    const hospitalName =
-      (language === "bn"
-        ? selectedHospitalDoc?.nameBn || selectedHospitalDoc?.name
-        : selectedHospitalDoc?.name) ||
-      (language === "bn" ? doctor.hospitalBn || doctor.hospital : doctor.hospital) ||
-      (language === "bn" ? "হাসপাতাল" : "Reputed Hospital");
-
-    // Format Doctor Name with Dr. / ডাঃ prefix
+    // Format Doctor Name
     const rawName =
       language === "bn"
         ? doctor.nameBn || doctor.name || "ডাক্তার"
@@ -135,12 +127,47 @@ export async function generateDoctorMetadata(
 
     let formattedName = rawName.trim();
     if (language === "bn") {
+      const desig = doctor.designationBn || doctor.designation;
+      if (desig && !formattedName.startsWith(desig) && !formattedName.includes(desig)) {
+        formattedName = `${desig} ${formattedName}`;
+      }
       if (!formattedName.startsWith("ডাঃ") && !formattedName.startsWith("ডাক্তার")) {
         formattedName = `ডাঃ ${formattedName}`;
       }
     } else {
-      if (!/^Dr\.?\s+/i.test(formattedName)) {
+      const desig = doctor.designation;
+      if (desig && !formattedName.toLowerCase().startsWith(desig.toLowerCase()) && !formattedName.toLowerCase().includes(desig.toLowerCase())) {
+        formattedName = `${desig} ${formattedName}`;
+      }
+      if (
+        !/^Dr\.?\s+/i.test(formattedName) &&
+        !/^Prof/i.test(formattedName) &&
+        !/^Assistant/i.test(formattedName) &&
+        !/^Associate/i.test(formattedName)
+      ) {
         formattedName = `Dr. ${formattedName}`;
+      }
+    }
+
+    // Format Hospital Name
+    const rawHospitalName =
+      (language === "bn"
+        ? selectedHospitalDoc?.nameBn || selectedHospitalDoc?.name
+        : selectedHospitalDoc?.name) ||
+      (language === "bn" ? doctor.hospitalBn || doctor.hospital : doctor.hospital);
+
+    const hospitalName = rawHospitalName ? rawHospitalName.trim() : "";
+
+    // Format Doctor Department / Specialty
+    const rawDept =
+      language === "bn"
+        ? doctor.departmentBn || doctor.specialtyBn || doctor.department || doctor.specialty
+        : doctor.department || doctor.specialty || doctor.departmentBn || doctor.specialtyBn;
+
+    let docDeptName = (rawDept || (language === "bn" ? "বিশেষজ্ঞ" : "Specialist")).trim();
+    if (language !== "bn") {
+      if (!/specialist/i.test(docDeptName) && !/doctor/i.test(docDeptName)) {
+        docDeptName = `${docDeptName} Specialist`;
       }
     }
 
@@ -149,16 +176,22 @@ export async function generateDoctorMetadata(
         ? doctor.specialtyBn || doctor.specialty || "বিশেষজ্ঞ"
         : doctor.specialty || doctor.specialtyBn || "Specialist";
 
+    const doctorName = (
+      language === "bn"
+        ? doctor.nameBn || doctor.name
+        : doctor.name || doctor.nameBn || ""
+    ).trim();
+
     // Meta Title & Description Frames
     const title =
       language === "bn"
-        ? `${formattedName} | ${docSpecialty}, ${area} - Meditime`
-        : `${formattedName} | ${docSpecialty} in ${area} - Meditime`;
+        ? `${docDeptName} ${doctorName} - ${area}-এ আপনার নিকটস্থ। চেম্বারের সময়সূচী, ফি দেখুন এবং ডাক্তারের অ্যাপয়েন্টমেন্ট বুক করুন।`
+        : `${docDeptName} ${doctorName} - Near You in ${area}. See Chamber Time, Fees, and Book Doctor Appoinrment.`;
 
     const description =
       language === "bn"
-        ? `${formattedName} একজন ${docSpecialty}, যিনি ${area}-এর ${hospitalName}-এ চিকিৎসা প্রদান করছেন। রেটিং ও রিভিও দেখুন এবং অনলাইনে অ্যাপয়েন্টমেন্ট বুক করুন।`
-        : `${formattedName} is a ${docSpecialty}, practicing at ${hospitalName} in ${area}. Check ratings, reviews & book your appointment online.`;
+        ? `${docDeptName} ${doctorName} - ${area}-এ আপনার নিকটস্থ। চেম্বারের সময়সূচী, ফি দেখুন এবং ডাক্তারের অ্যাপয়েন্টমেন্ট বুক করুন।`
+        : `${docDeptName} ${doctorName} - Near You in ${area}. See Chamber Time, Fees, and Book Doctor Appoinrment.`;
 
     const doctorSlug = doctor.slug || doctor._id;
 

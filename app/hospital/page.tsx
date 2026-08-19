@@ -5,8 +5,8 @@ import dbConnect from '@/lib/mongodb';
 import Hospital from '@/models/Hospital';
 
 export const metadata: Metadata = {
-  title: 'Hospitals & Clinics | Meditime',
-  description: 'Explore top hospitals and clinics listed on Meditime. Find the right facility by location, specialty, and available services.',
+  title: 'Hospitals Near You in Savar | Meditime',
+  description: 'Enam Medical College Doctor List, Savar Popular Hospital Doctor List, Ibn Sina Diagnostic Center Savar Doctor List, and Doctor Lists Top Hospitals in Savar',
 };
 
 async function getHospitalSchemaData() {

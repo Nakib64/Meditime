@@ -18,8 +18,8 @@ const poppins = Poppins({
 import { FaWhatsapp } from "react-icons/fa";
 
 export const metadata: Metadata = {
-  title: "Book Doctors, Tests & Hospital Appointments Online | Meditime",
-  description: "Book appointments with top doctors, diagnostic tests, and hospitals near you. Fast, easy, and trusted healthcare booking platform in Bangladesh.",
+  title: "Doctor Appointment in Savar | Meditime",
+  description: "Find doctor near you in Savar. Medicine Specialist, Diabetese, Orthopedic Doctors, Gynecologist Doctors and 30+ More Specialities. Book Doctor Serial.",
   icons: {
     icon: [
       { url: "/SVG/asset-8.svg", type: "image/svg+xml" },

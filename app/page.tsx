@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Script from "next/script";
 import HeroSection from "@/components/hero-section";
@@ -15,6 +16,12 @@ import BookAppointmentSection from "@/components/book-appointment-section";
 import FaqSection from "@/components/Faqsection";
 import AppDownloadSection from "@/components/app-download-section";
 import Footer from "@/components/footer";
+
+export const metadata: Metadata = {
+  title: "Doctor Appointment in Savar | Meditime",
+  description: "Find doctor near you in Savar. Medicine Specialist, Diabetese, Orthopedic Doctors, Gynecologist Doctors and 30+ More Specialities. Book Doctor Serial.",
+};
+
 
 
 export default function Home() {

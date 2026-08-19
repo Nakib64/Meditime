@@ -45,26 +45,10 @@ const getMedicalSpecialtyUrl = (specialty: string | undefined): string[] | strin
   return url ? [url] : specialty;
 };
 
-export async function generateMetadata(): Promise<Metadata> {
-  try {
-    await dbConnect();
-    const [doctorCount, deptCount, hospitalCount] = await Promise.all([
-      Doctor.countDocuments(),
-      Department.countDocuments(),
-      Hospital.countDocuments(),
-    ]);
-
-    return {
-      title: `Find ${doctorCount > 0 ? doctorCount : 500}+ doctors from ${deptCount > 0 ? deptCount : 40}+ Departments in one place | Meditime`,
-      description: `Book Appointments with doctors from reputed ${hospitalCount > 0 ? hospitalCount : 50}+ hospitals in Savar, Ashulia, Gazipur, or Kaliyakoir. View profiles, ratings, and available slots.`,
-    };
-  } catch (error) {
-    return {
-      title: 'Find Doctors from Top Departments in one place | Meditime',
-      description: 'Book Appointments with doctors from reputed hospitals in Savar, Ashulia, Gazipur, or Kaliyakoir. View profiles, ratings, and available slots.',
-    };
-  }
-}
+export const metadata: Metadata = {
+  title: "Doctors Near You in Savar | Meditime",
+  description: "Meditime Doctor List - 1000+ Doctors in Savar in one place - Medicine doctor, Diabetes Specialists, Surgeons, Orthopedic Doctor, Gynecologist, Cardiologist",
+};
 
 async function getSchemaData() {
   try {

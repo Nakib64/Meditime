@@ -93,7 +93,7 @@ export default function BlogsPage() {
     try {
       const formDataImg = new FormData();
       formDataImg.append("image", file);
-      
+
       const response = await fetch("/api/upload/imgbb", {
         method: "POST",
         body: formDataImg,
@@ -223,10 +223,10 @@ export default function BlogsPage() {
 
   const isFormValid = Boolean(
     formData.title.trim() &&
-      formData.titleBn.trim() &&
-      stripHtml(formData.description) &&
-      stripHtml(formData.descriptionBn) &&
-      formData.imageUrl.trim()
+    formData.titleBn.trim() &&
+    stripHtml(formData.description) &&
+    stripHtml(formData.descriptionBn) &&
+    formData.imageUrl.trim()
   );
 
   if (loading && blogs.length === 0) {
@@ -413,9 +413,9 @@ export default function BlogsPage() {
                 )}
                 {imagePreview && (
                   <div className="mt-3 relative inline-block">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
                       className="w-32 h-24 object-cover rounded-lg border-2 border-gray-100 shadow-sm"
                     />
                     <button
