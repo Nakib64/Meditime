@@ -21,6 +21,7 @@ import { motion } from "framer-motion";
 import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
 import DoctorCard from "@/components/doctor-card";
 import Loading from "@/app/loading";
+import { trackHospitalProfileView } from "@/lib/gtm";
 
 interface Hospital {
   slug: string;
@@ -101,6 +102,7 @@ export default function HospitalDetailPage() {
       if (hospitalResponse.ok && hospitalData.hospital) {
         const foundHospital = hospitalData.hospital;
         setHospital(foundHospital);
+        trackHospitalProfileView(foundHospital.name);
 
         // 2. Fetch doctors for this specific hospital using the new dedicated API
         const doctorsResponse = await fetch(`/api/hospitals/${encodeURIComponent(hospitalSlug)}/doctors`);

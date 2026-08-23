@@ -38,6 +38,7 @@ import DiagnosticCart from "@/components/diagnostic/DiagnosticCart";
 import DiagnosticTestList from "@/components/diagnostic/DiagnosticTestList";
 import DiagnosticLocationFilter from "@/components/diagnostic/DiagnosticLocationFilter";
 import DiagnosticHistoryModal from "@/components/diagnostic/DiagnosticHistoryModal";
+import { trackTestCategoryView } from "@/lib/gtm";
 
 export default function DiagnosticPage() {
   const router = useRouter();
@@ -330,7 +331,10 @@ export default function DiagnosticPage() {
   useEffect(() => {
     setCurrentPage(1);
     fetchTests(1, debouncedSearch, selectedCategory, true);
-  }, [debouncedSearch, selectedCategory, fetchTests]);
+    if (selectedCategory || debouncedSearch) {
+      trackTestCategoryView(selectedCategory || debouncedSearch, selectedVenue?.name);
+    }
+  }, [debouncedSearch, selectedCategory, fetchTests, selectedVenue]);
 
   // Fetch more on page change
   useEffect(() => {

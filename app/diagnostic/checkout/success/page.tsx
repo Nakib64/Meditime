@@ -13,6 +13,7 @@ import { generateDiagnosticBookingPDF } from "@/lib/diagnostic-pdf";
 import DiagnosticInvoice from "@/components/diagnostic/DiagnosticInvoice";
 import Loading from "@/app/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { trackTestBookingPurchase } from "@/lib/gtm";
 
 export default function DiagnosticSuccessPage() {
   const router = useRouter();
@@ -112,6 +113,18 @@ export default function DiagnosticSuccessPage() {
       
       const prevBookings = JSON.parse(localStorage.getItem("myDiagnosticBookings") || "[]");
       localStorage.setItem("myDiagnosticBookings", JSON.stringify([bookingToSave, ...prevBookings]));
+
+      // Trigger GTM conversion event
+      const testNames = bookedTests.map((t: any) => t.name).join(", ");
+      const total = bookedTests.reduce((a: number, b: any) => a + (b.price || 0), 0);
+      trackTestBookingPurchase({
+        bookingId: confirmedBooking.bookingId || confirmedBooking._id,
+        testName: testNames,
+        hospitalName: selectedVenue?.name,
+        totalPrice: total,
+        patientName: checkoutData?.patientName,
+        patientPhone: checkoutData?.mobileNumber,
+      });
       
       showToast.success("Booking confirmed successfully!");
       setBookingComplete(true);

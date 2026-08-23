@@ -17,6 +17,7 @@ import { t } from "@/lib/translations";
 import { convertToBengaliNumber } from "@/lib/utils";
 import Nav_for_details from "@/components/nav_for_details";
 import Loading from "@/app/loading";
+import { trackTestBookingInitiate } from "@/lib/gtm";
 
 export default function DiagnosticCheckoutPage() {
   const router = useRouter();
@@ -46,8 +47,22 @@ export default function DiagnosticCheckoutPage() {
       const savedVenue = localStorage.getItem("diagnosticVenue");
 
       if (savedTests && savedVenue) {
-        setBookedTests(JSON.parse(savedTests));
-        setSelectedVenue(JSON.parse(savedVenue));
+        try {
+          const parsedTests = JSON.parse(savedTests);
+          const parsedVenue = JSON.parse(savedVenue);
+          setBookedTests(parsedTests);
+          setSelectedVenue(parsedVenue);
+
+          const testNames = parsedTests.map((t: any) => t.name).join(", ");
+          const total = parsedTests.reduce((acc: number, t: any) => acc + (t.price || 0), 0);
+          trackTestBookingInitiate({
+            testName: testNames,
+            hospitalName: parsedVenue?.name,
+            testPrice: total,
+          });
+        } catch {
+          // parse error fallback
+        }
       } else {
         showToast.error("No tests or venue selected. Redirecting...");
         router.push("/diagnostic");

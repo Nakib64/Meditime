@@ -8,6 +8,7 @@ import Image from "next/image";
 import { Send, Phone, Mail, MapPin, ArrowRight } from "lucide-react";
 import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
 import { toast } from "react-hot-toast";
+import { trackContactFormSubmit } from "@/lib/gtm";
 
 // Import Swiper styles
 import "swiper/css";
@@ -86,6 +87,12 @@ export default function ContactSection() {
       const data = await response.json();
 
       if (response.ok) {
+        trackContactFormSubmit({
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          subject: formData.subject,
+        });
         toast.success(t.success);
         setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
       } else {

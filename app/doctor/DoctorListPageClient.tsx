@@ -8,6 +8,7 @@ import {
   useRef,
   Suspense,
 } from "react";
+import { trackDoctorCategoryView } from "@/lib/gtm";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -450,6 +451,10 @@ function DoctorListPageContent() {
   useEffect(() => {
     setPage(1);
     fetchDoctors(1, true);
+
+    if (selectedDepartment || selectedHospital) {
+      trackDoctorCategoryView(selectedDepartment || null, selectedHospital || null);
+    }
   }, [
     debouncedSearchQuery,
     selectedSpecialty,

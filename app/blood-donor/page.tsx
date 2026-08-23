@@ -40,6 +40,7 @@ import { homepageTranslations } from "@/lib/homepage-translations";
 import { PiDropDuotone, PiCheckCircleDuotone, PiShieldCheckDuotone, PiClockDuotone } from "react-icons/pi";
 import toast from "react-hot-toast";
 import { formatAvailabilityStatus, formatLastDonation } from "@/lib/blood-donor-utils";
+import { trackBloodSearchInitiate, trackBloodDonorRegistered } from "@/lib/gtm";
 
 const bloodGroups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 
@@ -170,6 +171,7 @@ export default function BloodDonorPage() {
     setLoading(true);
     try {
       let url = `/api/blood-donors?`;
+      let thanaName = "";
       if (group) url += `bloodGroup=${encodeURIComponent(group)}&`;
       if (divisionId) {
         const div = divisions.find(d => d._id === divisionId);
@@ -181,7 +183,14 @@ export default function BloodDonorPage() {
       }
       if (thanaId) {
         const th = thanas.find(t => t._id === thanaId);
-        if (th) url += `thana=${encodeURIComponent(th.name)}&`;
+        if (th) {
+          thanaName = th.name;
+          url += `thana=${encodeURIComponent(th.name)}&`;
+        }
+      }
+
+      if (group || thanaName) {
+        trackBloodSearchInitiate(group || "All", thanaName || undefined);
       }
 
       const res = await fetch(url);
@@ -227,6 +236,7 @@ export default function BloodDonorPage() {
         body: JSON.stringify(formData),
       });
       if (response.ok) {
+        trackBloodDonorRegistered(formData.bloodGroup);
         toast.success(language === 'bn' ? "আবেদন সফলভাবে জমা হয়েছে!" : "Application submitted successfully!");
         setIsModalOpen(false);  
         

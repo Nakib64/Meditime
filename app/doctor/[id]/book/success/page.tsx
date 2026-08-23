@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import Image from "next/image";
 import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
 import Nav_for_details from "@/components/nav_for_details";
 import PageLoader from "@/components/page-loader";
+import { trackDoctorBookingPurchase } from "@/lib/gtm";
 
 const banglaMonths = [
   "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
@@ -81,6 +82,7 @@ function BookingSuccessContent() {
 
   const [appointment, setAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const trackedRef = useRef(false);
 
   const fetchAppointment = useCallback(async () => {
     try {
@@ -123,6 +125,24 @@ function BookingSuccessContent() {
       setLoading(false);
     }
   }, [appointmentId, fetchAppointment]);
+
+  // Track purchase_doctor_booking when appointment is ready
+  useEffect(() => {
+    if (appointment && !trackedRef.current) {
+      trackedRef.current = true;
+      const doc = appointment.doctorId || {};
+      const deptName = typeof doc.department === "object" ? doc.department?.name : doc.department;
+      trackDoctorBookingPurchase({
+        bookingId: appointment._id || appointment.serialNumber || appointmentId,
+        doctorName: doc.name || appointment.doctorName,
+        diseaseDepartment: deptName,
+        hospitalName: appointment.hospitalName,
+        visitFee: appointment.fee || doc.fee || doc.consultationFee || 0,
+        patientName: appointment.patientName,
+        patientPhone: appointment.mobileNumber,
+      });
+    }
+  }, [appointment, appointmentId]);
 
   const handlePrint = () => window.print();
 

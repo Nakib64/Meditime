@@ -3,7 +3,7 @@ import { generateHospitalMetadata } from "@/lib/hospital-metadata";
 import { cookies } from "next/headers";
 
 export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> | { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
   const resolvedParams = await params;
   const cookieStore = await cookies();

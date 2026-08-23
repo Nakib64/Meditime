@@ -17,6 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { IDoctor } from "@/models/Doctor";
 import Nav_for_details from "@/components/nav_for_details";
 import PageLoader from "@/components/page-loader";
+import { trackDoctorBookingInitiate } from "@/lib/gtm";
 
 // Convert English number to Bengali
 const convertToBengaliNumber = (num: number | string, language: 'en' | 'bn'): string => {
@@ -118,13 +119,19 @@ export default function BookAppointmentPage() {
       const data = await response.json();
       if (response.ok && data.doctor) {
         setDoctor(data.doctor);
+        trackDoctorBookingInitiate({
+          doctorName: data.doctor.name,
+          diseaseDepartment: typeof data.doctor.department === "object" ? data.doctor.department?.name : data.doctor.department,
+          hospitalName: selectedHospitalSlug || (Array.isArray(data.doctor.availability) && data.doctor.availability[0]?.hospital) || undefined,
+          visitFee: data.doctor.fee || data.doctor.consultationFee,
+        });
       }
     } catch (error) {
       console.error("Error fetching doctor:", error);
     } finally {
       setLoading(false);
     }
-  }, [doctorId]);
+  }, [doctorId, selectedHospitalSlug]);
 
   const fetchAppointments = useCallback(async () => {
     try {

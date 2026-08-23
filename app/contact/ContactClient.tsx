@@ -17,6 +17,7 @@ import { showToast } from "@/lib/toast";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { FaFacebookF, FaWhatsapp, FaEnvelope, FaMapMarkerAlt, FaHeadset } from "react-icons/fa";
+import { trackContactFormSubmit } from "@/lib/gtm";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -102,6 +103,12 @@ export default function ContactPage() {
       const result = await response.json();
 
       if (response.ok) {
+        trackContactFormSubmit({
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          subject: data.subject,
+        });
         setIsSuccess(true);
         reset();
         showToast.success(language === 'bn' ? "অ্যাডমিনকে মেসেজ পাঠানো হয়েছে!" : "Message has been sent to admin!");

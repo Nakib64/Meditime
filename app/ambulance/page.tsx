@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
+import { trackAmbulanceSearchInitiate, trackAmbulanceDriverContacted } from "@/lib/gtm";
 
 interface Ambulance {
   _id: string;
@@ -193,6 +194,10 @@ export default function AmbulancePage() {
       if (selectedThana) params.append("thana", selectedThana);
       if (availabilityStatusFilter) params.append("availabilityStatus", availabilityStatusFilter);
       if (vehicleTypeFilter) params.append("vehicleType", vehicleTypeFilter);
+
+      if (vehicleTypeFilter || selectedThana) {
+        trackAmbulanceSearchInitiate(vehicleTypeFilter || "All", selectedThana || undefined);
+      }
 
       const response = await fetch(`/api/ambulances?${params.toString()}`);
       const data = await response.json();
@@ -625,7 +630,17 @@ export default function AmbulancePage() {
                         </div>
 
                         <div className="pt-2">
-                          <a href={`tel:${ambulance.phoneNumber}`} className="block">
+                          <a
+                            href={`tel:${ambulance.phoneNumber}`}
+                            className="block"
+                            onClick={() =>
+                              trackAmbulanceDriverContacted({
+                                driverName: ambulance.name,
+                                driverPhone: ambulance.phoneNumber,
+                                ambulanceType: ambulance.vehicleType,
+                              })
+                            }
+                          >
                             <Button className="w-full btn-primary btn-slide text-white font-bold flex items-center justify-center gap-2">
                               <Phone className="h-4 w-4" />
                               {t.card.callNow}
