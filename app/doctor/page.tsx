@@ -1,5 +1,4 @@
 import DoctorListPageClient from './DoctorListPageClient';
-import Script from 'next/script';
 import { Metadata } from 'next';
 import dbConnect from '@/lib/mongodb';
 import Doctor from '@/models/Doctor';
@@ -102,15 +101,6 @@ export default async function DoctorListPage() {
 
   return (
     <>
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-YPCJ8FPZNM" strategy="afterInteractive" />
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-YPCJ8FPZNM');
-        `}
-      </Script>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
