@@ -17,7 +17,7 @@ import { t } from "@/lib/translations";
 import { convertToBengaliNumber } from "@/lib/utils";
 import Nav_for_details from "@/components/nav_for_details";
 import Loading from "@/app/loading";
-import { trackTestBookingInitiate } from "@/lib/gtm";
+import { trackTestCheckout, trackTestOtpVerified, pushPatientFormState } from "@/lib/gtm";
 
 export default function DiagnosticCheckoutPage() {
   const router = useRouter();
@@ -52,14 +52,6 @@ export default function DiagnosticCheckoutPage() {
           const parsedVenue = JSON.parse(savedVenue);
           setBookedTests(parsedTests);
           setSelectedVenue(parsedVenue);
-
-          const testNames = parsedTests.map((t: any) => t.name).join(", ");
-          const total = parsedTests.reduce((acc: number, t: any) => acc + (t.price || 0), 0);
-          trackTestBookingInitiate({
-            testName: testNames,
-            hospitalName: parsedVenue?.name,
-            testPrice: total,
-          });
         } catch {
           // parse error fallback
         }
@@ -114,6 +106,17 @@ export default function DiagnosticCheckoutPage() {
         isVerified: true
       };
 
+      // Push patient information form state to dataLayer
+      pushPatientFormState({
+        pageType: "diagnostic_checkout_step",
+        pageSubType: "patient_information_form",
+        patientNameFilled: patientName,
+        patientMobileFilled: formattedMobileNumber,
+        patientGender: gender,
+        patientAge: age,
+        formStep: "patient_information",
+      });
+
       if (typeof window !== "undefined") {
         localStorage.setItem("diagnosticCheckout", JSON.stringify(checkoutData));
       }
@@ -138,11 +141,54 @@ export default function DiagnosticCheckoutPage() {
       return;
     }
 
+    // Push patient information form fields to dataLayer
+    pushPatientFormState({
+      pageType: "diagnostic_checkout_step",
+      pageSubType: "patient_information_form",
+      patientNameFilled: patientName,
+      patientMobileFilled: mobileNumber,
+      patientGender: gender,
+      patientAge: age,
+      formStep: "patient_information",
+    });
+
+    // Trigger test_checkout event
+    const subtotal = bookedTests.reduce((acc: number, t: any) => acc + (t.price || 0), 0);
+    trackTestCheckout({
+      selected_hospital: selectedVenue?.name || "",
+      appointment_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
+      patient_gender: gender || "",
+      test_count: bookedTests.length,
+      subtotal: subtotal,
+      total_due: subtotal,
+      promo_code_applied: affiliateCode || "none",
+      items: bookedTests.map((t: any) => ({
+        test_name: t.name,
+        test_category: (t.departments && t.departments[0]) || t.category || "General",
+        test_price: t.price,
+      })),
+    });
+
     // Check if phone verification is needed — ALWAYS verify phone number
     setShowVerifyModal(true);
   };
 
   const handleVerifySuccess = async () => {
+    // Trigger test_otp_verified event
+    const subtotal = bookedTests.reduce((acc: number, t: any) => acc + (t.price || 0), 0);
+    trackTestOtpVerified({
+      selected_hospital: selectedVenue?.name || "",
+      appointment_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
+      test_count: bookedTests.length,
+      subtotal: subtotal,
+      total_due: subtotal,
+      items: bookedTests.map((t: any) => ({
+        test_name: t.name,
+        test_category: (t.departments && t.departments[0]) || t.category || "General",
+        test_price: t.price,
+      })),
+    });
+
     if (currentUser) {
       const updatedUser = { ...currentUser, isPhoneVerified: true };
       setCurrentUser(updatedUser);

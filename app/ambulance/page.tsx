@@ -22,7 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
-import { trackAmbulanceSearchInitiate, trackAmbulanceDriverContacted } from "@/lib/gtm";
+import { trackSearchAmbulance, trackClickAmbulanceContact } from "@/lib/gtm";
 
 interface Ambulance {
   _id: string;
@@ -195,13 +195,24 @@ export default function AmbulancePage() {
       if (availabilityStatusFilter) params.append("availabilityStatus", availabilityStatusFilter);
       if (vehicleTypeFilter) params.append("vehicleType", vehicleTypeFilter);
 
-      if (vehicleTypeFilter || selectedThana) {
-        trackAmbulanceSearchInitiate(vehicleTypeFilter || "All", selectedThana || undefined);
-      }
-
       const response = await fetch(`/api/ambulances?${params.toString()}`);
       const data = await response.json();
-      if (response.ok) setAmbulances(data.ambulances);
+      if (response.ok) {
+        const count = Array.isArray(data.ambulances) ? data.ambulances.length : 0;
+        setAmbulances(data.ambulances || []);
+
+        if (selectedDivision || selectedDistrict || selectedThana || availabilityStatusFilter || vehicleTypeFilter) {
+          trackSearchAmbulance({
+            division: selectedDivision,
+            district: selectedDistrict,
+            thana: selectedThana,
+            status_filter: availabilityStatusFilter,
+            ambulance_type: vehicleTypeFilter,
+            result_count: count,
+            source_page: "ambulance_search",
+          });
+        }
+      }
     } catch (error) {
       console.error("Error fetching ambulances:", error);
     } finally {
@@ -634,10 +645,15 @@ export default function AmbulancePage() {
                             href={`tel:${ambulance.phoneNumber}`}
                             className="block"
                             onClick={() =>
-                              trackAmbulanceDriverContacted({
-                                driverName: ambulance.name,
-                                driverPhone: ambulance.phoneNumber,
-                                ambulanceType: ambulance.vehicleType,
+                              trackClickAmbulanceContact({
+                                ambulance_type: ambulance.vehicleType || "",
+                                ambulance_status: ambulance.availabilityStatus || "",
+                                ambulance_location: (language === "bn"
+                                  ? [ambulance.thanaBn, ambulance.districtBn]
+                                  : [ambulance.thana, ambulance.district]
+                                ).filter(Boolean).join(", ") || "",
+                                ambulance_verified: ambulance.isApproved ? "yes" : "no",
+                                source_page: "ambulance_search",
                               })
                             }
                           >

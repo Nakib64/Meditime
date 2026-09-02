@@ -40,7 +40,7 @@ import { homepageTranslations } from "@/lib/homepage-translations";
 import { PiDropDuotone, PiCheckCircleDuotone, PiShieldCheckDuotone, PiClockDuotone } from "react-icons/pi";
 import toast from "react-hot-toast";
 import { formatAvailabilityStatus, formatLastDonation } from "@/lib/blood-donor-utils";
-import { trackBloodSearchInitiate, trackBloodDonorRegistered } from "@/lib/gtm";
+import { trackBloodDonorCtaClick, trackSearchBloodDonor, trackClickBloodDonorContact, trackBloodDonorRegistered } from "@/lib/gtm";
 
 const bloodGroups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 
@@ -171,15 +171,23 @@ export default function BloodDonorPage() {
     setLoading(true);
     try {
       let url = `/api/blood-donors?`;
+      let divisionName = "";
+      let districtName = "";
       let thanaName = "";
       if (group) url += `bloodGroup=${encodeURIComponent(group)}&`;
       if (divisionId) {
         const div = divisions.find(d => d._id === divisionId);
-        if (div) url += `division=${encodeURIComponent(div.name)}&`;
+        if (div) {
+          divisionName = div.name;
+          url += `division=${encodeURIComponent(div.name)}&`;
+        }
       }
       if (districtId) {
         const dist = districts.find(d => d._id === districtId);
-        if (dist) url += `district=${encodeURIComponent(dist.name)}&`;
+        if (dist) {
+          districtName = dist.name;
+          url += `district=${encodeURIComponent(dist.name)}&`;
+        }
       }
       if (thanaId) {
         const th = thanas.find(t => t._id === thanaId);
@@ -189,14 +197,22 @@ export default function BloodDonorPage() {
         }
       }
 
-      if (group || thanaName) {
-        trackBloodSearchInitiate(group || "All", thanaName || undefined);
-      }
-
       const res = await fetch(url);
       const data = await res.json();
       if (res.ok) {
-        setDonors(data.bloodDonors);
+        const count = Array.isArray(data.bloodDonors) ? data.bloodDonors.length : 0;
+        setDonors(data.bloodDonors || []);
+
+        if (group || divisionName || districtName || thanaName) {
+          trackSearchBloodDonor({
+            blood_group: group || "All",
+            division: divisionName,
+            district: districtName,
+            thana: thanaName,
+            result_count: count,
+            source_page: "blood_donor_search",
+          });
+        }
       }
     } catch (error) {
       console.error("Error searching donors:", error);
@@ -331,7 +347,13 @@ export default function BloodDonorPage() {
             </p>
 
             <Button
-              onClick={scrollToJoin}
+              onClick={() => {
+                trackBloodDonorCtaClick({
+                  cta_label: "Be a Donor",
+                  source_page: "blood_donor_landing",
+                });
+                scrollToJoin();
+              }}
               className="btn-primary btn-slide h-14 text-md md:text-lg"
             >
               {language === 'en' ? "Be a Donor" : "রক্তদাতা হোন"}
@@ -559,7 +581,20 @@ export default function BloodDonorPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <a href={`tel:${donor.phoneNumber}`} className="btn-primary btn-slide h-10 flex-1 flex items-center justify-center gap-2 text-sm rounded-xl">
+                            <a
+                              href={`tel:${donor.phoneNumber}`}
+                              onClick={() =>
+                                trackClickBloodDonorContact({
+                                  donor_name: donor.name || "",
+                                  donor_blood_group: donor.bloodGroup || "",
+                                  donor_status: donor.availabilityStatus || "",
+                                  donor_location: [donor.thana, donor.district].filter(Boolean).join(", ") || "",
+                                  donor_verified: donor.isApproved ? "yes" : "no",
+                                  source_page: "blood_donor_search",
+                                })
+                              }
+                              className="btn-primary btn-slide h-10 flex-1 flex items-center justify-center gap-2 text-sm rounded-xl"
+                            >
                               <Phone className="w-4 h-4 fill-white" />
                               {t.card.callNow[language]}
                             </a>
@@ -621,7 +656,15 @@ export default function BloodDonorPage() {
                   {/* MODAL TRIGGER BUTTON */}
                   <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                     <DialogTrigger asChild>
-                      <Button className="h-16 px-10 btn-primary btn-slide">
+                      <Button
+                        onClick={() =>
+                          trackBloodDonorCtaClick({
+                            cta_label: "Become a Blood Donor",
+                            source_page: "blood_donor_landing",
+                          })
+                        }
+                        className="h-16 px-10 btn-primary btn-slide"
+                      >
                         <PlusCircle className="w-6 h-6" />
                         {t.becomeDonor[language]}
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

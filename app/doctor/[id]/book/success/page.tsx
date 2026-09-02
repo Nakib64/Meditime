@@ -24,7 +24,7 @@ import Image from "next/image";
 import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
 import Nav_for_details from "@/components/nav_for_details";
 import PageLoader from "@/components/page-loader";
-import { trackDoctorBookingPurchase } from "@/lib/gtm";
+import { trackPurchaseBook } from "@/lib/gtm";
 
 const banglaMonths = [
   "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
@@ -126,20 +126,35 @@ function BookingSuccessContent() {
     }
   }, [appointmentId, fetchAppointment]);
 
-  // Track purchase_doctor_booking when appointment is ready
+  // Track purchase_book when appointment is ready
   useEffect(() => {
     if (appointment && !trackedRef.current) {
       trackedRef.current = true;
       const doc = appointment.doctorId || {};
       const deptName = typeof doc.department === "object" ? doc.department?.name : doc.department;
-      trackDoctorBookingPurchase({
-        bookingId: appointment._id || appointment.serialNumber || appointmentId,
-        doctorName: doc.name || appointment.doctorName,
-        diseaseDepartment: deptName,
-        hospitalName: appointment.hospitalName,
-        visitFee: appointment.fee || doc.fee || doc.consultationFee || 0,
-        patientName: appointment.patientName,
-        patientPhone: appointment.mobileNumber,
+      const aptDate = appointment.appointmentDate
+        ? new Date(appointment.appointmentDate).toISOString().split("T")[0]
+        : "";
+      const phone = appointment.mobileNumber
+        ? (appointment.mobileNumber.startsWith("+88") ? appointment.mobileNumber : `+88${appointment.mobileNumber}`)
+        : "";
+
+      trackPurchaseBook({
+        booking_id: appointment._id || appointment.serialNumber || appointmentId || undefined,
+        doctor_name: doc.name || appointment.doctorName || "",
+        doctor_specialty: deptName || doc.specialty || appointment.specialty || "",
+        selected_hospital: appointment.hospitalName || appointment.hospital || "",
+        appointment_date: aptDate,
+        patient_type: appointment.patientType || "new",
+        patient_gender: appointment.gender || "",
+        booking_method: "online",
+        consultation_fee: appointment.fee || doc.fee || doc.consultationFee || 0,
+        location_area: appointment.hospitalAddress || appointment.hospitalLocation || "",
+        source_page: "checkout",
+        user_data: {
+          patient_name: appointment.patientName || "",
+          phone_number: phone,
+        },
       });
     }
   }, [appointment, appointmentId]);

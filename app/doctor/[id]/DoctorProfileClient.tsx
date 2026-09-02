@@ -27,6 +27,7 @@ import DoctorCard from "@/components/doctor-card";
 import PageLoader from "@/components/page-loader";
 import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
 import { IDoctor } from "@/models/Doctor";
+import { trackAddToCartBook } from "@/lib/gtm";
 
 
 
@@ -316,6 +317,25 @@ const displayedBio = needsTruncation && !bioExpanded
   const fees = [doctor.newPatientFee, doctor.reportShowFee].filter(f => f !== undefined && f !== null && f > 0) as number[];
   const minFee = fees.length > 0 ? Math.min(...fees) : doctor.newPatientFee;
 
+  const handleBookClick = () => {
+    if (!doctor) return;
+    const selectedHospitalObj = hospitals.find(h => h.slug === selectedHospitalSlug || (h as any).slug === selectedHospitalSlug);
+    const selectedHospitalName = selectedHospitalObj?.name || selectedHospitalSlug;
+    const selectedChamberGroup = groupedAvailability.find((g: any) => g.hospital === selectedHospitalSlug);
+    const chamberDayTime = selectedChamberGroup?.slots?.map((s: any) => formatSlot(s)).join(", ") || "";
+    const deptName = typeof doctor.department === "object" ? (doctor.department as any)?.name : doctor.department;
+
+    trackAddToCartBook({
+      doctor_name: doctor.name,
+      doctor_specialty: deptName || doctor.specialty || "",
+      selected_hospital: selectedHospitalName || "",
+      chamber_day_time: chamberDayTime,
+      consultation_fee: doctor.newPatientFee || (doctor as any).fee || (doctor as any).consultationFee || 0,
+      source_page: "doctor_profile",
+      doctor_url_slug: doctor.slug || doctorId,
+    });
+  };
+
 
   const enrichedRelatedDoctors = relatedDoctors;
 
@@ -574,13 +594,15 @@ const displayedBio = needsTruncation && !bioExpanded
             {/* Book Appointment */}
             <div>
               <div className="space-y-5">
-                <Link href={`/doctor/${doctorId}/book?hospital=${selectedHospitalSlug}`}>
+                <Link
+                  href={`/doctor/${doctorId}/book?hospitalSlug=${encodeURIComponent(selectedHospitalSlug)}`}
+                  onClick={handleBookClick}
+                >
                   <Button
                     className="w-full flex justify-center items-center btn-primary btn-slide h-12"
                   >
                     {language === 'bn' ? 'বুক অ্যাপয়েন্টমেন্ট' : 'Book Appointment'}
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-
                   </Button>
                 </Link>
               </div>
@@ -775,13 +797,15 @@ const displayedBio = needsTruncation && !bioExpanded
                 {language === 'bn' ? 'অ্যাপয়েন্টমেন্ট বুক করুন' : 'Book Appointment'}
               </h2>
               <div className="space-y-5">
-                <Link href={`/doctor/${doctorId}/book?hospitalSlug=${encodeURIComponent(selectedHospitalSlug)}`}>
+                <Link
+                  href={`/doctor/${doctorId}/book?hospitalSlug=${encodeURIComponent(selectedHospitalSlug)}`}
+                  onClick={handleBookClick}
+                >
                    <Button
                     className="w-full flex justify-center items-center btn-primary btn-slide h-12"
                   >
                     {language === 'bn' ? 'বুক অ্যাপয়েন্টমেন্ট' : 'Book Appointment'}
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-
                   </Button>
                 </Link>
               </div>

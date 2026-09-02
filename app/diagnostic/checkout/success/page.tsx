@@ -13,7 +13,7 @@ import { generateDiagnosticBookingPDF } from "@/lib/diagnostic-pdf";
 import DiagnosticInvoice from "@/components/diagnostic/DiagnosticInvoice";
 import Loading from "@/app/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { trackTestBookingPurchase } from "@/lib/gtm";
+import { trackTestPurchase } from "@/lib/gtm";
 
 export default function DiagnosticSuccessPage() {
   const router = useRouter();
@@ -114,16 +114,27 @@ export default function DiagnosticSuccessPage() {
       const prevBookings = JSON.parse(localStorage.getItem("myDiagnosticBookings") || "[]");
       localStorage.setItem("myDiagnosticBookings", JSON.stringify([bookingToSave, ...prevBookings]));
 
-      // Trigger GTM conversion event
-      const testNames = bookedTests.map((t: any) => t.name).join(", ");
+      // Trigger GTM conversion event (test_purchase)
       const total = bookedTests.reduce((a: number, b: any) => a + (b.price || 0), 0);
-      trackTestBookingPurchase({
-        bookingId: confirmedBooking.bookingId || confirmedBooking._id,
-        testName: testNames,
-        hospitalName: selectedVenue?.name,
-        totalPrice: total,
-        patientName: checkoutData?.patientName,
-        patientPhone: checkoutData?.mobileNumber,
+      trackTestPurchase({
+        booking_id: confirmedBooking.bookingId || confirmedBooking._id,
+        selected_hospital: selectedVenue?.name || "",
+        appointment_date: checkoutData?.appointmentDate ? new Date(checkoutData.appointmentDate).toISOString().split("T")[0] : "",
+        test_count: bookedTests.length,
+        subtotal: total,
+        total_due: total,
+        platform_fee: 0,
+        discount: 0,
+        booking_method: "pay_at_hospital",
+        items: bookedTests.map((t: any) => ({
+          test_name: t.name,
+          test_category: (t.departments && t.departments[0]) || t.category || "General",
+          test_price: t.price,
+        })),
+        user_data: {
+          patient_name: checkoutData?.patientName,
+          phone: checkoutData?.mobileNumber,
+        },
       });
       
       showToast.success("Booking confirmed successfully!");

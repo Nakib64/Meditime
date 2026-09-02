@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Clock, MapPin, Stethoscope, ChevronRight, Building2 } from "lucide-react";
 import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
+import { trackViewBook } from "@/lib/gtm";
 
 export interface Doctor {
   _id: string;
@@ -298,11 +299,21 @@ const [groupedAvailability, setGroupedAvailability] = useState<GroupedAvailabili
     </Card>
   );
 
+  const handleCardClick = () => {
+    trackViewBook({
+      doctor_name: doctor.name,
+      doctor_specialty: displaySpecialty || doctor.specialty || (typeof doctor.department === 'string' ? doctor.department : ''),
+      source_page: "doctors_listing",
+      cta_label: language === "bn" ? "অ্যাপয়েন্টমেন্ট নিন" : "Book Appointment",
+    });
+  };
+
   return (
     <motion.div whileHover={!disableLink ? { y: -3 } : {}}>
       {!disableLink ? (
         <Link
-          href={`/doctor/${doctor.slug ||  doctor._id}`}
+          href={`/doctor/${doctor.slug || doctor._id}`}
+          onClick={handleCardClick}
         >
           {CardContent}
         </Link>

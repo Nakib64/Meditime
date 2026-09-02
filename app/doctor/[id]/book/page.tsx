@@ -17,7 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { IDoctor } from "@/models/Doctor";
 import Nav_for_details from "@/components/nav_for_details";
 import PageLoader from "@/components/page-loader";
-import { trackDoctorBookingInitiate } from "@/lib/gtm";
+import { trackCheckoutBook, pushPatientUserData, pushPatientFormState } from "@/lib/gtm";
 
 // Convert English number to Bengali
 const convertToBengaliNumber = (num: number | string, language: 'en' | 'bn'): string => {
@@ -119,11 +119,19 @@ export default function BookAppointmentPage() {
       const data = await response.json();
       if (response.ok && data.doctor) {
         setDoctor(data.doctor);
-        trackDoctorBookingInitiate({
-          doctorName: data.doctor.name,
-          diseaseDepartment: typeof data.doctor.department === "object" ? data.doctor.department?.name : data.doctor.department,
-          hospitalName: selectedHospitalSlug || (Array.isArray(data.doctor.availability) && data.doctor.availability[0]?.hospital) || undefined,
-          visitFee: data.doctor.fee || data.doctor.consultationFee,
+        const deptName = typeof data.doctor.department === "object" ? data.doctor.department?.name : data.doctor.department;
+        const hospitalObj = hospitals.find(h => h.slug === selectedHospitalSlug || h.name === selectedHospitalSlug);
+        const hospitalName = hospitalObj?.name || selectedHospitalSlug || (Array.isArray(data.doctor.availability) && data.doctor.availability[0]?.hospital) || "";
+
+        trackCheckoutBook({
+          doctor_name: data.doctor.name,
+          doctor_specialty: deptName || data.doctor.specialty || "",
+          selected_hospital: hospitalName,
+          appointment_date: selectedDate ? getDateString(selectedDate) : "",
+          patient_type: patientType,
+          patient_gender: gender,
+          promo_code_applied: affiliateCode || "none",
+          source_page: "appointment_form",
         });
       }
     } catch (error) {
@@ -431,6 +439,38 @@ export default function BookAppointmentPage() {
         localStorage.setItem("pendingBooking", JSON.stringify(checkoutData));
       }
 
+      // Push patient information form state to dataLayer (in requested field order)
+      pushPatientFormState({
+        pageType: "doctor_checkout_step",
+        pageSubType: "patient_information_form",
+        patientNameFilled: patientName,
+        patientMobileFilled: formattedMobileNumber,
+        patientGender: gender,
+        patientAge: age,
+        formStep: "patient_information",
+      });
+
+      // Push patient personal information to dataLayer (user_data object)
+      pushPatientUserData({
+        name: patientName,
+        phone_number: formattedMobileNumber ? (formattedMobileNumber.startsWith("+88") ? formattedMobileNumber : `+88${formattedMobileNumber}`) : "",
+        gender: gender || undefined,
+        age: age || undefined,
+      });
+
+      // Track checkout_book event
+      const deptName = typeof doctor?.department === "object" ? (doctor.department as any)?.name : doctor?.department;
+      trackCheckoutBook({
+        doctor_name: doctor?.name,
+        doctor_specialty: deptName || doctor?.specialty || "",
+        selected_hospital: hospitalName,
+        appointment_date: selectedDate ? getDateString(selectedDate) : "",
+        patient_type: patientType,
+        patient_gender: gender,
+        promo_code_applied: affiliateCode || "none",
+        source_page: "appointment_form",
+      });
+
       router.push(`/doctor/${doctorId}/book/checkout`);
     } catch (error) {
       console.error("Error preparing checkout:", error);
@@ -451,6 +491,17 @@ export default function BookAppointmentPage() {
       setMobileError(language === 'en' ? "Please provide 11 digits number (starting with 01). Example: 01XXXXXXXXX" : "অনুগ্রহ করে 11 ডিজিটের নম্বরটি দিন (01 দিয়ে শুরু করুন)। যেমন: 01XXXXXXXXX");
       return;
     }
+
+    // Push patient information form fields to dataLayer
+    pushPatientFormState({
+      pageType: "doctor_checkout_step",
+      pageSubType: "patient_information_form",
+      patientNameFilled: patientName,
+      patientMobileFilled: mobileNumber,
+      patientGender: gender,
+      patientAge: age,
+      formStep: "patient_information",
+    });
 
     if (mobileError) {
       alert(mobileError);

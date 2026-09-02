@@ -38,7 +38,7 @@ import DiagnosticCart from "@/components/diagnostic/DiagnosticCart";
 import DiagnosticTestList from "@/components/diagnostic/DiagnosticTestList";
 import DiagnosticLocationFilter from "@/components/diagnostic/DiagnosticLocationFilter";
 import DiagnosticHistoryModal from "@/components/diagnostic/DiagnosticHistoryModal";
-import { trackTestCategoryView } from "@/lib/gtm";
+import { trackTestCategoryView, trackViewTestCart, trackTestAddToCart } from "@/lib/gtm";
 
 export default function DiagnosticPage() {
   const router = useRouter();
@@ -178,6 +178,12 @@ export default function DiagnosticPage() {
       if (exists) {
         return prev.filter(t => t._id !== test._id);
       }
+      // Track view_test_cart on Add to Cart
+      trackViewTestCart({
+        test_name: test.name,
+        test_category: (Array.isArray(test.departments) ? test.departments[0] : test.department) || (Array.isArray(test.categories) ? test.categories[0] : test.category) || "General",
+        test_price: test.price,
+      });
       return [...prev, { _id: test._id, name: test.name, nameBn: test.nameBn, price: test.price, serialNumber: test.serialNumber, recommendations: test.recommendations || [] }];
     });
   };
@@ -563,7 +569,25 @@ export default function DiagnosticPage() {
                     )}
                   </div>
                   <Button
-                    onClick={() => router.push('/diagnostic/checkout')}
+                    onClick={() => {
+                      if (!selectedVenue) return;
+                      const subtotal = bookedTests.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                      trackTestAddToCart({
+                        selected_hospital: selectedVenue.name || "",
+                        division: selectedDivision || "",
+                        district: selectedDistrict || "",
+                        thana: selectedThana || "",
+                        test_count: bookedTests.length,
+                        subtotal: subtotal,
+                        total_due: subtotal,
+                        items: bookedTests.map((t) => ({
+                          test_name: t.name,
+                          test_category: (t as any).departments?.[0] || (t as any).category || "General",
+                          test_price: t.price || 0,
+                        })),
+                      });
+                      router.push('/diagnostic/checkout');
+                    }}
                     disabled={!selectedVenue}
                     className={`w-full font-bold rounded-xl h-11 border-none shadow-sm transition-all ${selectedVenue ? 'bg-white text-[#00B7B5] hover:bg-slate-50' : 'bg-slate-200 text-slate-400 opacity-70 cursor-not-allowed'}`}
                   >
