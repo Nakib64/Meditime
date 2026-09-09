@@ -17,7 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { IDoctor } from "@/models/Doctor";
 import Nav_for_details from "@/components/nav_for_details";
 import PageLoader from "@/components/page-loader";
-import { trackCheckoutBook, pushPatientUserData, pushPatientFormState } from "@/lib/gtm";
+import { trackCheckoutBook, trackBookOtpVerified, pushPatientUserData, pushPatientFormState } from "@/lib/gtm";
 
 // Convert English number to Bengali
 const convertToBengaliNumber = (num: number | string, language: 'en' | 'bn'): string => {
@@ -119,27 +119,13 @@ export default function BookAppointmentPage() {
       const data = await response.json();
       if (response.ok && data.doctor) {
         setDoctor(data.doctor);
-        const deptName = typeof data.doctor.department === "object" ? data.doctor.department?.name : data.doctor.department;
-        const hospitalObj = hospitals.find(h => h.slug === selectedHospitalSlug || h.name === selectedHospitalSlug);
-        const hospitalName = hospitalObj?.name || selectedHospitalSlug || (Array.isArray(data.doctor.availability) && data.doctor.availability[0]?.hospital) || "";
-
-        trackCheckoutBook({
-          doctor_name: data.doctor.name,
-          doctor_specialty: deptName || data.doctor.specialty || "",
-          selected_hospital: hospitalName,
-          appointment_date: selectedDate ? getDateString(selectedDate) : "",
-          patient_type: patientType,
-          patient_gender: gender,
-          promo_code_applied: affiliateCode || "none",
-          source_page: "appointment_form",
-        });
       }
     } catch (error) {
       console.error("Error fetching doctor:", error);
     } finally {
       setLoading(false);
     }
-  }, [doctorId, selectedHospitalSlug]);
+  }, [doctorId]);
 
   const fetchAppointments = useCallback(async () => {
     try {
@@ -513,6 +499,24 @@ export default function BookAppointmentPage() {
   };
 
   const handleVerifySuccess = async () => {
+    // Track OTP Verified event on Doctor Page
+    const selectedHospitalObj = hospitals.find(h => h.slug === selectedHospitalSlug || h.name === selectedHospitalSlug);
+    const hospitalName = selectedHospitalObj?.name || selectedHospitalSlug || "";
+    const deptName = typeof doctor?.department === "object" ? (doctor.department as any)?.name : doctor?.department;
+    const locationArea = selectedHospitalObj?.address || selectedHospitalObj?.location || (selectedHospitalObj?.thana ? (typeof selectedHospitalObj.thana === 'object' ? selectedHospitalObj.thana.name : selectedHospitalObj.thana) : "") || "";
+
+    trackBookOtpVerified({
+      doctor_name: doctor?.name || "",
+      doctor_specialty: deptName || doctor?.specialty || "",
+      selected_hospital: hospitalName,
+      appointment_date: selectedDate ? getDateString(selectedDate) : "",
+      patient_type: patientType,
+      patient_gender: gender,
+      booking_method: "online",
+      location_area: locationArea,
+      source_page: "appointment_form",
+    });
+
     if (currentUser) {
       const updatedUser = { ...currentUser, isPhoneVerified: true };
       setCurrentUser(updatedUser);

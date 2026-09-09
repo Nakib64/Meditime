@@ -191,6 +191,31 @@ export const trackDoctorBookingInitiate = (data: {
   });
 };
 
+// Event: Doctor Booking OTP Verified
+export const trackBookOtpVerified = (data: {
+  doctor_name?: string;
+  doctor_specialty?: string;
+  selected_hospital?: string;
+  appointment_date?: string;
+  patient_type?: string;
+  patient_gender?: string;
+  booking_method?: string;
+  location_area?: string;
+  source_page?: string;
+}) => {
+  pushToDataLayer("book_otp_verified", {
+    doctor_name: data.doctor_name || "",
+    doctor_specialty: data.doctor_specialty || "",
+    selected_hospital: data.selected_hospital || "",
+    appointment_date: data.appointment_date || "",
+    patient_type: data.patient_type || "new",
+    patient_gender: data.patient_gender || "",
+    booking_method: data.booking_method || "online",
+    location_area: data.location_area || "",
+    source_page: data.source_page || "appointment_form",
+  });
+};
+
 // Event 4: Successful Appointment Done (Confirmation / Success Page)
 export const trackPurchaseBook = (data: {
   booking_id?: string;
@@ -245,6 +270,16 @@ export const trackDoctorBookingPurchase = trackPurchaseBook;
 export const trackHospitalProfileView = (hospitalName: string) => {
   pushToDataLayer("view_hospital_profile", {
     hospital_name: hospitalName,
+  });
+};
+
+export const trackViewBuilding = (data: {
+  building_name?: string;
+  location?: string;
+}) => {
+  pushToDataLayer("view_building", {
+    building_name: data.building_name || "",
+    location: data.location || "",
   });
 };
 

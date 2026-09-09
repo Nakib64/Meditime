@@ -21,7 +21,7 @@ import { motion } from "framer-motion";
 import { useLanguage, getLocalizedValue } from "@/contexts/LanguageContext";
 import DoctorCard from "@/components/doctor-card";
 import Loading from "@/app/loading";
-import { trackHospitalProfileView } from "@/lib/gtm";
+import { trackHospitalProfileView, trackViewBuilding } from "@/lib/gtm";
 
 interface Hospital {
   slug: string;
@@ -91,6 +91,20 @@ export default function HospitalDetailPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const getHospitalLocationString = useCallback((h: Hospital | null): string => {
+    if (!h) return "";
+    const parts: string[] = [];
+
+    const division = getLocalizedValue(h.thana?.district?.division?.name, h.thana?.district?.division?.nameBn, language);
+    const district = getLocalizedValue(h.thana?.district?.name, h.thana?.district?.nameBn, language);
+    const thana = getLocalizedValue(h.thana?.name, h.thana?.nameBn, language);
+    if (thana) parts.push(thana);
+    if (district) parts.push(district);
+    if (division) parts.push(division);
+
+    return parts.join(", ");
+  }, [language]);
+
   const fetchHospitalAndDoctors = useCallback(async () => {
     try {
       setLoading(true);
@@ -103,6 +117,10 @@ export default function HospitalDetailPage() {
         const foundHospital = hospitalData.hospital;
         setHospital(foundHospital);
         trackHospitalProfileView(foundHospital.name);
+        trackViewBuilding({
+          building_name: foundHospital.name,
+          location: foundHospital.address || getHospitalLocationString(foundHospital) || "",
+        });
 
         // 2. Fetch doctors for this specific hospital using the new dedicated API
         const doctorsResponse = await fetch(`/api/hospitals/${encodeURIComponent(hospitalSlug)}/doctors`);
@@ -125,29 +143,13 @@ export default function HospitalDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [hospitalSlug]);
+  }, [hospitalSlug, getHospitalLocationString]);
 
   useEffect(() => {
     if (hospitalSlug) {
       fetchHospitalAndDoctors();
     }
   }, [hospitalSlug, fetchHospitalAndDoctors]);
-
-  const getHospitalLocationString = (h: Hospital | null): string => {
-    if (!h) return "";
-    const parts: string[] = [];
-
-    const division = getLocalizedValue(h.thana?.district?.division?.name, h.thana?.district?.division?.nameBn, language);
-    const district = getLocalizedValue(h.thana?.district?.name, h.thana?.district?.nameBn, language);
-    const thana = getLocalizedValue(h.thana?.name, h.thana?.nameBn, language);
-    if (thana) parts.push(thana);
-    if (district) parts.push(district);
-    if (division) parts.push(division);
-
-
-
-    return parts.join(", ");
-  };
 
   const recommendedHospitals = useMemo(() => {
     return allHospitals;
